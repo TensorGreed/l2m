@@ -210,7 +210,7 @@ Webhook Input (from VS Code extension) ──▶ Agent ──▶ Output (structu
                                               └── tool: MCP filesystem / git / etc.
 ```
 
-**Sample**: `VS Code L2M Coding Agent Flow` (`vscode-l2m-coding-agent-flow.json`) — the canonical wiring for the [L2M VS Code extension](/getting-started/vscode-extension).
+**Sample**: `VS Code L2M Coding Agent` (`vscode-l2m-coding-agent-flow.json`) — the canonical wiring for the [L2M VS Code extension](/getting-started/vscode-extension).
 
 **Sharp edges**:
 - Patch actions are sandboxed to the workspace root by the extension; the workflow doesn't need to enforce path safety itself, but should validate that destinations stay relative.
