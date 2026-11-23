@@ -7552,7 +7552,9 @@ async function executeNodeHandler(
             nodeId: node.id,
             nodeName: node.name || node.id,
             serverKey,
-            serverLabel: serverKey,
+            // A registered server is named by its registry name (an inline server's label is its node's name, so it keeps
+            // the adapter id); the registry id stays in the approval key.
+            serverLabel: (resolvedEntry.registryServerId && resolvedEntry.serverLabel?.trim()) || serverKey,
             toolName: resolvedEntry.originalName,
             args,
             classificationSource: classification.source === "manual" ? "manual" : "not_marked_read_only",

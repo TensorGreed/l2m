@@ -176,6 +176,8 @@ export interface ResolvedMCPTool {
   serverId: string;
   /** Registry entry the tool came from, when the server config referenced one. */
   registryServerId?: string;
+  /** The server's display name (a registered server's name), when the config carries one. */
+  serverLabel?: string;
   /** Phase 10.2 — annotations the server sent for this tool. */
   annotations?: McpToolAnnotations;
   /** Phase 10.5 — the tool's outputSchema, when declared. */
