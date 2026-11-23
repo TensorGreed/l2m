@@ -15,19 +15,25 @@ The L2M VS Code extension turns any L2M workflow into a coding agent inside the 
 - Structured action handling: code blocks render with copy/insert, suggested file patches preview before apply with workspace-path validation, suggested commands run only after explicit approval in a VS Code terminal.
 - Local session memory with deterministic compaction — older turns get summarised, recent turns sent in full.
 
-## Install (development build)
+## Install
 
-Until the extension ships to the Marketplace, install the `.vsix` directly.
+Install **L2M Agent** from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=l2m.vscode-l2m-agent): search for "L2M Agent" in the Extensions view, or run:
 
-### From CI
+```bash
+code --install-extension l2m.vscode-l2m-agent
+```
 
-Every CI run on `main` produces a `vscode-l2m-agent-vsix` workflow artifact. Download the latest one from the [Actions tab](https://github.com/TensorGreed/l2m/actions), unzip, and:
+### Development build
+
+To try changes that aren't released yet, install a `.vsix` directly.
+
+**From CI.** Every CI run on `main` produces a `vscode-l2m-agent-vsix` workflow artifact. Download the latest one from the [Actions tab](https://github.com/TensorGreed/l2m/actions), unzip, and:
 
 ```bash
 code --install-extension vscode-l2m-agent.vsix
 ```
 
-### From source
+**From source.**
 
 ```bash
 pnpm install
@@ -46,7 +52,7 @@ The extension talks to L2M over the standard webhook routes (no special server c
 
 ### 1. Import the VS Code Coding Agent template
 
-Open the L2M web UI → **Templates** → click **Use Template** on **VS Code L2M Coding Agent Flow** (in the **Agents** category). Save it. Note the resulting workflow ID (visible in the editor URL or the workflow header).
+Open the L2M web UI → **Templates** → click **Use Template** on **VS Code L2M Coding Agent** (in the **Agents** category). Save it. Note the resulting workflow ID (visible in the editor URL or the workflow header).
 
 The template implements the full structured-response contract the extension expects: `message`, `actions[]` (patch + command), `codes[]`, `attachments[]`, `context_update`, `follow_up_question`. As shipped, its chat model is `qwen2.5:7b` on a local Ollama server (`http://localhost:11434/v1`): pull that model, or switch the Chat Model node to OpenAI, Anthropic or another provider.
 

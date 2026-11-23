@@ -6,6 +6,9 @@ All notable changes to L2M are documented here. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+### Added
+- **The VS Code extension is on the Marketplace.** Install **L2M Agent** from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=l2m.vscode-l2m-agent) or with `code --install-extension l2m.vscode-l2m-agent`; the docs, the VS Code recipe and the README link to it. The docs now name the template as the gallery shows it, **VS Code L2M Coding Agent**.
+
 ### Changed
 - **Faster CI, same tests.** Pull request CI runs its suites side by side instead of one after another: lint and build, the other packages' unit tests, the API unit tests in four shards, the API suite on Postgres in five shards, the web E2E suites and the VS Code extension all start at once. The required checks keep their names (**Lint Test Build**, **API on Postgres**, **Web E2E**); the first two now wait for their shards and pass only when every shard passed. A pull request that changes nothing the API suite covers (only the web app, docs or other workflows) skips the Postgres shards, and one that changes nothing the end-to-end suites cover (only unit tests, deployment files or docs) skips them; both checks still report, and say why. Pushes to main run everything. The rules are in `scripts/ci/changed-areas.mjs`; an unknown path runs every suite.
 
