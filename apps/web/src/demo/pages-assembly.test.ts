@@ -192,7 +192,8 @@ describe("the Pages site", () => {
   });
 });
 
-describe("the search-engine checks on the assembled site", () => {
+// Each case copies a site and runs the checker as a child process; one test runs up to eight, which can pass 5 s on a busy CI runner.
+describe("the search-engine checks on the assembled site", { timeout: 30_000 }, () => {
   function site() {
     const run = assemble(repo({ demo: "built" }));
     expect(run.status, run.output).toBe(0);

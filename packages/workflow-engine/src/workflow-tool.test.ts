@@ -397,7 +397,8 @@ describe("Workflow Tool", () => {
       asWrite.dependencies
     );
     expect(gated.status).toBe("waiting_approval");
-    expect(JSON.stringify(gated.output)).toContain("workflow:wf-writer");
+    // The person deciding sees the called workflow by its name.
+    expect(JSON.stringify(gated.output)).toContain("on 'Writer'");
     // Declared read-only by the child, the call goes through, and the untrusted label reaches the child: its own write needs approval there.
     const inbound = harness({ calls: writerCalls, workflows: [declaredReadOnly(childWrites)], rules: [rule] });
     const result = await executeWorkflow(

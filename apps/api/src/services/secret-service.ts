@@ -47,6 +47,14 @@ function parseMasterKey(rawKey?: string): Buffer {
   return key;
 }
 
+/**
+ * An L2M record id such as `mcp_<uuid>` (an MCP server's registry id) is 40+ characters of token alphabet but is not a
+ * secret: the generic long-token rule would hide it, so approval cards read "[REDACTED]" where a server should be.
+ */
+function isPrefixedRecordId(value: string): boolean {
+  return /^[a-z]{2,16}_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(value);
+}
+
 export class SecretService {
   private readonly key: Buffer;
   private externalSecrets: ExternalSecretsService | null = null;
@@ -400,7 +408,7 @@ export class SecretService {
       if (
         /sk-[a-zA-Z0-9]{20,}/.test(value) ||
         /^(AIza|ya29\.|AKIA|ghp_|gho_|github_pat_|xox[bpas]-|glpat-|sk-ant-)[a-zA-Z0-9_-]{10,}/.test(value) ||
-        /^[a-zA-Z0-9+/=_-]{40,}$/.test(value)
+        (/^[a-zA-Z0-9+/=_-]{40,}$/.test(value) && !isPrefixedRecordId(value))
       ) {
         return "[REDACTED]";
       }

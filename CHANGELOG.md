@@ -9,6 +9,9 @@ All notable changes to L2M are documented here. The format follows [Keep a Chang
 ### Changed
 - **Faster CI, same tests.** Pull request CI runs its suites side by side instead of one after another: lint and build, the other packages' unit tests, the API unit tests in four shards, the API suite on Postgres in five shards, the web E2E suites and the VS Code extension all start at once. The required checks keep their names (**Lint Test Build**, **API on Postgres**, **Web E2E**); the first two now wait for their shards and pass only when every shard passed. A pull request that changes nothing the API suite covers (only the web app, docs or other workflows) skips the Postgres shards, and one that changes nothing the end-to-end suites cover (only unit tests, deployment files or docs) skips them; both checks still report, and say why. Pushes to main run everything. The rules are in `scripts/ci/changed-areas.mjs`; an unknown path runs every suite.
 
+### Fixed
+- **Approval requests name the MCP server.** When an agent asks to call a write tool on a registered MCP server, the request now says the server's name ("… on 'Helpdesk'") instead of its registry id, and the approval card no longer shows **[REDACTED]** where the server should be: an L2M record id (`mcp_` plus a UUID) is no longer mistaken for a token. The approval stays bound to the registry entry, so renaming a server does not reopen a decision. A Workflow Tool call names the called workflow the same way.
+
 ## [0.1.0] - 2026-11-20
 
 The first tagged release. Install it with `curl -fsSL https://lsquarem.com/install.sh | sh` or two Docker Compose commands; see [Install with Docker](apps/docs/docs/getting-started/install.md).

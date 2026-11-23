@@ -428,6 +428,23 @@ describe("agent-level gate before MCP write tools", () => {
     expect(resolvePendingApproval(again[0]!).details).toMatchObject({ arguments: "{\"email\":\"someone.else@example.org\"}" });
   });
 
+  it("names a registered server by its name, not its registry id, in the request", async () => {
+    const paused: WorkflowExecutionState[] = [];
+    const registryAgent = agentWorkflow("update_contact");
+    registryAgent.nodes = registryAgent.nodes.map((entry) => (entry.id === "tool" ? { ...entry, config: { registryServerId: "crm_registry", toolName: "update_contact" } } : entry));
+    const args = { email: "ana@example.org" };
+    const first = await executeWorkflow(
+      { workflow: registryAgent, executionId: "exec-named", webhookPayload: { user_prompt: "Update Ana" } },
+      deps({ paused, provider: new ToolThenAnswerProvider("crm-mcp__update_contact", () => args) })
+    );
+    expect(first.status).toBe("waiting_approval");
+    expect(first.output).toMatchObject({ approvalMessage: "Agent 'CRM agent' wants to call the write tool 'update_contact' on 'CRM'." });
+    expect(resolvePendingApproval(paused[0]!).details).toMatchObject({ server: "CRM" });
+    // The approval stays bound to the registry entry, not to its (renamable) name.
+    const handoff = paused[0]!.approvalHandoff;
+    expect(handoff?.kind === "rerun" ? handoff.approvalKey : "").toBe(writeToolApprovalKey("agent", "crm_registry", "update_contact", args));
+  });
+
   it("lets tools an admin marked read-only through and does nothing when the setting is off", async () => {
     const invoked: Array<Record<string, unknown>> = [];
     const registryAgent = agentWorkflow("find_contact");
