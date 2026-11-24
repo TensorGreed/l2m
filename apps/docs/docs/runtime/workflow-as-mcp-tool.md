@@ -124,5 +124,6 @@ They are not the MCP protocol, so MCP clients cannot connect to them directly. U
 
 - [MCP gateway](../product/mcp-gateway): toolsets, clients, policy and security
 - [Agent loop](./agent-loop): how the runtime calls MCP tools
+- [A2A agents](./a2a-agents): publish a workflow to other agents over the Agent2Agent protocol instead of MCP
 - [MCP integration](../extensions/mcp): using MCP tools inside L2M workflows (the inverse direction)
 - [Webhook security](../security/secure-webhooks): the legacy routes share the webhook secret and replay protection

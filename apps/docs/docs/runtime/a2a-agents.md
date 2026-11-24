@@ -1,5 +1,5 @@
 ---
-title: "A2A: publish a workflow as an agent, and call remote agents"
+title: "A2A agents: publish workflows and call remote agents"
 description: "Serve an L2M workflow as an Agent2Agent (A2A) agent with an Agent Card and JSON-RPC endpoint, and call remote A2A agents from a workflow or a Supervisor."
 ---
 

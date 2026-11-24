@@ -26,7 +26,7 @@ Agent orchestration is iterative, not one-shot.
   - supported: `openai_chat_model`, `anthropic_chat_model`, `ollama_chat_model`, `openai_compatible_chat_model`, `ai_gateway_chat_model`, `azure_openai_chat_model`, `google_gemini_chat_model`, `llm_call`
 - `memory`: attach `local_memory`
 - `tool`: attach one or more `mcp_tool` (any MCP server, or a [built-in tool](./built-in-agent-tools.md)) or `workflow_tool` (another workflow as one tool, see [Workflow Tool](./workflow-tool.md))
-- `worker`: attach worker agents (Supervisor node only). Connected workers (`Agent Orchestrator` or `Supervisor` nodes) are exposed to the parent as tool calls, so a Supervisor can delegate downstream recursively.
+- `worker`: attach worker agents (Supervisor node only). Connected workers (`Agent Orchestrator` or `Supervisor` nodes) are exposed to the parent as tool calls, so a Supervisor can delegate downstream recursively. An [A2A Agent](./a2a-agents) node on this port makes a remote agent a worker too.
 
 These attachment edges are not part of linear DAG execution. The `chat_model` attachment is required, and the runtime
 always uses that node's `provider` config. Attachment-only helper nodes are marked as skipped in execution traces
