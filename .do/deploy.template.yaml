@@ -24,7 +24,7 @@ spec:
         registry_type: GHCR
         registry: tensorgreed
         repository: l2m
-        tag: v0.1.0
+        tag: v0.1.1
       http_port: 4000
       # The API uses about 400-500 MB once started.
       instance_size_slug: apps-s-1vcpu-1gb
@@ -74,7 +74,7 @@ spec:
         registry_type: GHCR
         registry: tensorgreed
         repository: l2m-web
-        tag: v0.1.0
+        tag: v0.1.1
       # nginx in the image listens on port 80. Its own proxy to api:4000 (the component above) is a fallback; the
       # router below sends the API routes to the api component directly.
       http_port: 80

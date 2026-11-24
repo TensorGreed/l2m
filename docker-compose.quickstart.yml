@@ -1,6 +1,6 @@
 ## L2M quickstart: the published images, SQLite in a Docker volume, nothing to configure.
 ##
-##   curl -fsSL https://raw.githubusercontent.com/TensorGreed/l2m/v0.1.0/docker-compose.quickstart.yml -o docker-compose.yml
+##   curl -fsSL https://raw.githubusercontent.com/TensorGreed/l2m/v0.1.1/docker-compose.quickstart.yml -o docker-compose.yml
 ##   docker compose up -d
 ##
 ## Then open http://localhost:8080 and sign in as admin@l2m.local with the password printed once in the log:
@@ -13,7 +13,7 @@
 ## (in the shell or a .env file next to this one) to choose your own.
 ##
 ## Settings you can set the same way (all optional):
-##   L2M_VERSION   image tag (default v0.1.0, the release this file belongs to; `latest` follows new releases)
+##   L2M_VERSION   image tag (default v0.1.1, the release this file belongs to; `latest` follows new releases)
 ##   L2M_PORT      port of the studio on this machine (default 8080)
 ##   L2M_BIND      address the port listens on (default 127.0.0.1, this machine only; 0.0.0.0 for your network,
 ##                 behind HTTPS: sign-in cookies are sent over plain HTTP here)
@@ -28,7 +28,7 @@ name: l2m-quickstart
 
 services:
   api:
-    image: ghcr.io/tensorgreed/l2m:${L2M_VERSION:-v0.1.0}
+    image: ghcr.io/tensorgreed/l2m:${L2M_VERSION:-v0.1.1}
     restart: unless-stopped
     # Makes the master key and the admin password on the first start (see the top of this file), then starts the
     # API as the image does.
@@ -59,7 +59,7 @@ services:
     # No published port: the studio below forwards /api, /webhook, /mcp and /v1 to it.
 
   web:
-    image: ghcr.io/tensorgreed/l2m-web:${L2M_VERSION:-v0.1.0}
+    image: ghcr.io/tensorgreed/l2m-web:${L2M_VERSION:-v0.1.1}
     restart: unless-stopped
     depends_on:
       api:

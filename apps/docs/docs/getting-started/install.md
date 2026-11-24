@@ -35,7 +35,7 @@ same data. Optional settings, as environment variables before `sh`:
 
 | Variable | Default | |
 |---|---|---|
-| `L2M_VERSION` | the release installed before, else `v0.1.0` | Release tag to install, such as `v0.1.0`. A re-run never moves an install back to an older release unless you name one. |
+| `L2M_VERSION` | the release installed before, else `v0.1.1` | Release tag to install, such as `v0.1.1`. A re-run never moves an install back to an older release unless you name one. |
 | `L2M_DIR` | `./l2m` | Folder for the compose file. |
 | `L2M_PORT` | `8080` | Port of the studio on this machine. |
 | `L2M_PULL` | `always` | `missing` uses images you already have. |
@@ -47,7 +47,7 @@ For example: `curl -fsSL https://lsquarem.com/install.sh | L2M_PORT=9000 sh`.
 In an empty folder:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/TensorGreed/l2m/v0.1.0/docker-compose.quickstart.yml -o docker-compose.yml
+curl -fsSL https://raw.githubusercontent.com/TensorGreed/l2m/v0.1.1/docker-compose.quickstart.yml -o docker-compose.yml
 docker compose up -d
 ```
 

@@ -6,6 +6,10 @@ All notable changes to L2M are documented here. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-24
+
+A2A agents in both directions, deploy buttons for Render and DigitalOcean, and the VS Code extension in the stores. Release notes: [release-notes/v0.1.1.md](release-notes/v0.1.1.md).
+
 ### Added
 - **Deploy to Render or DigitalOcean with one button.** `render.yaml` (a Render Blueprint) and `.do/deploy.template.yaml` (a DigitalOcean App Platform spec) create your own L2M in your own account: the release API and studio images, pinned to one release tag, a Postgres database (Render Postgres, or an App Platform Dev Database; neither platform keeps a container's files) and the platform's HTTPS address, with secure cookies and public sign-up off. Render generates the master key and the first admin's password; on DigitalOcean you set both before creating the app. The README and the new [Deploy to a cloud host](apps/docs/docs/getting-started/deploy-to-a-cloud-host.md) page carry the buttons, what each creates, the first sign-in, upgrades, backups and links to each platform's pricing (the platform bills you). The studio image takes `L2M_API_UPSTREAM=host:port` to forward the API routes to an API that is not at `api:4000`, and then looks the name up again every 10 seconds, so a redeployed API is found without restarting the studio; unset, it forwards to `api:4000` exactly as before.
 - **A2A agents, both ways.** MCP for tools, A2A for agents, one governed runtime. An **Expose as A2A Agent** trigger serves a workflow as an Agent2Agent (A2A 1.0, and 0.3) agent: an Agent Card at `/a2a/<path>/.well-known/agent-card.json` and a JSON-RPC endpoint at `/a2a/<path>` taking `SendMessage`, `SendStreamingMessage` (server-sent events), `GetTask` and `CancelTask`. Each task is a production run (trigger type `a2a`, task id = execution id) with budgets, approvals (a run waiting for one is `input-required`), response content rules and run history; callers send an L2M API key by default, or the trigger's bearer token, or nothing when it is public. An **A2A Agent** node calls a remote agent from its card URL, as a step or as a Supervisor worker next to local agents, with its token from a secret, calls only to the card's own host, a timeout that cancels the remote task, the outbound URL rules, and write-tool approval for worker calls unless marked read-only. The node's **Check agent** reads the remote card. Sample: **A2A agent round trip** (no model keys). See [A2A Agents](apps/docs/docs/runtime/a2a-agents.md).
@@ -470,5 +474,6 @@ Versioning rule of thumb pre-1.0:
 - **Minor** — new features, behavior tweaks that don't break workflow JSON or env vars. May include schema-additive migrations.
 - **Major** — workflow JSON `schemaVersion` bump, env var renames, removed nodes, or any other change a self-hoster has to adapt to. Will not happen before `v1.0.0`.
 
-[Unreleased]: https://github.com/TensorGreed/l2m/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/TensorGreed/l2m/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/TensorGreed/l2m/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/TensorGreed/l2m/releases/tag/v0.1.0
