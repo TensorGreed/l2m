@@ -7,6 +7,8 @@ description: "Make AI agents ask a person before they call an MCP write tool: ap
 
 An agent that can call write tools can also call the wrong one, with the wrong arguments, at the wrong time. **Human-in-the-loop approval** stops the agent before a risky call, shows a person exactly what it is about to do, and continues only after they approve. For governance, the decision also has to be recorded where nobody can quietly change it later.
 
+Watch: [A human approves before your AI agent writes](https://www.youtube.com/watch?v=rBfi0cNOGh0) (2:42) shows an agent pausing before a write tool and a person approving it in the inbox.
+
 Concepts: [Human in the loop for AI agents](/learn/agents/human-in-the-loop) covers where a person belongs in an agent's path and how to avoid approval fatigue.
 
 Use it for agents that send messages, change records, move money or touch production systems, and anywhere the person who starts a run should not be the one who approves it.
