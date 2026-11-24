@@ -18,15 +18,38 @@ import { A2AClientError, type A2ACallContext, type A2AClientAdapter, type A2ARes
 /** The most a card or a JSON-RPC answer may weigh. A bigger one is refused, not read. */
 export const A2A_MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
 
-async function readBody(response: Response, what: string): Promise<string> {
+/**
+ * The body as text, read chunk by chunk and stopped (the stream canceled) as soon as it passes the cap, so an answer
+ * without a Content-Length (chunked) is never held in memory past A2A_MAX_RESPONSE_BYTES.
+ */
+export async function readBody(response: Response, what: string, maxBytes: number = A2A_MAX_RESPONSE_BYTES): Promise<string> {
+  const tooLarge = () => new A2AClientError("protocol", `The ${what} is larger than ${maxBytes} bytes.`);
   const declared = Number(response.headers.get("content-length") ?? "");
-  if (Number.isFinite(declared) && declared > A2A_MAX_RESPONSE_BYTES) {
+  if (Number.isFinite(declared) && declared > maxBytes) {
     await response.body?.cancel().catch(() => undefined);
-    throw new A2AClientError("protocol", `The ${what} is larger than ${A2A_MAX_RESPONSE_BYTES} bytes.`);
+    throw tooLarge();
   }
-  const text = await response.text();
-  if (text.length > A2A_MAX_RESPONSE_BYTES) throw new A2AClientError("protocol", `The ${what} is larger than ${A2A_MAX_RESPONSE_BYTES} bytes.`);
-  return text;
+  if (!response.body) return "";
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel().catch(() => undefined);
+      throw tooLarge();
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
 }
 
 function headersFor(context: A2ACallContext, extra: Record<string, string> = {}): Headers {
@@ -77,11 +100,12 @@ export class JsonRpcA2AAdapter implements A2AClientAdapter {
     // A relative endpoint is read against the card's own URL.
     const resolvedUrl = new URL(endpoint.url, url).toString();
     if (!/^https?:\/\//i.test(resolvedUrl)) throw new A2AClientError("card", `The agent card at ${hostOf(url)} names an endpoint that is not http(s).`);
-    // The token goes only to the host the node names: a card cannot send it elsewhere.
-    if (context.token && new URL(resolvedUrl).origin !== new URL(url).origin) {
+    // Messages (and the token) go only to the host the node names, the one its outbound checks judged: a card cannot
+    // send them elsewhere.
+    if (new URL(resolvedUrl).origin !== new URL(url).origin) {
       throw new A2AClientError(
         "card",
-        `The agent card at ${hostOf(url)} names an endpoint on another host (${hostOf(resolvedUrl)}). L2M sends the token only to the host in the Agent URL: use the endpoint's own card URL.`
+        `The agent card at ${hostOf(url)} names an endpoint on another host (${hostOf(resolvedUrl)}). L2M calls only the host in the Agent URL: use the card URL on the endpoint's own host.`
       );
     }
     return { cardUrl: url, card: parsed.data, endpoint: { ...endpoint, url: resolvedUrl } };

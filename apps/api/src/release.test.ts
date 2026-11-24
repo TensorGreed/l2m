@@ -1077,13 +1077,14 @@ describe("production paths belong to what serves production (M1, N1, N2)", () =>
         node("bare", "webhook_input", {}),
         node("form", "form_trigger", { path: "feedback" }),
         node("tool", "mcp_server_trigger", { path: "helper" }),
+        node("agent", "a2a_trigger", { path: "Researcher" }),
         node("free", "form_trigger", { path: "unused" }),
         node("slack", "slack_trigger", { path: "slack-events" })
       ]
     };
-    const used = new Set(["webhook:orders", "webhook:orders-copy", "webhook:bare", "form:feedback", "mcp:helper"]);
+    const used = new Set(["webhook:orders", "webhook:orders-copy", "webhook:bare", "form:feedback", "mcp:helper", "a2a:researcher"]);
     const copy = withUniqueTriggerPaths(source, used);
-    expect(copy.nodes.map((entry) => (entry.config as { path?: string }).path)).toEqual(["Orders-copy-2", "bare-copy", "feedback-copy", "helper-copy", "unused", "slack-events"]);
+    expect(copy.nodes.map((entry) => (entry.config as { path?: string }).path)).toEqual(["Orders-copy-2", "bare-copy", "feedback-copy", "helper-copy", "Researcher-copy", "unused", "slack-events"]);
     expect(productionRoutingKeys(copy).every((entry) => !used.has(entry.key))).toBe(true);
     expect((source.nodes[0]!.config as { path: string }).path).toBe("Orders");
   });
@@ -1123,6 +1124,30 @@ describe("production paths belong to what serves production (M1, N1, N2)", () =>
     expect(used.statusCode, used.body).toBe(200);
     const fromTemplate = (await context.store.getWorkflow(used.json<{ workflowId: string }>().workflowId))!;
     expect(fromTemplate.nodes.find((entry) => entry.id === "hook")!.config).toMatchObject({ path: "lead-enrich-copy-3" });
+  });
+
+  it("an A2A agent path is claimed like an MCP trigger path: another workflow, in any project, cannot save onto it; a duplicate gets its own", async () => {
+    const context = await createTestContext();
+    const builder = await login(context, "builder");
+    await context.store.upsertProject({ id: "p-other", name: "Other" });
+    const agent = (id: string, projectId: string, agentPath: string): Workflow =>
+      ({
+        id,
+        name: `Agent ${id}`,
+        schemaVersion: "1.0.0",
+        workflowVersion: 1,
+        projectId,
+        nodes: [node("a2a", "a2a_trigger", { path: agentPath, authMode: "public" }), node("out", "output", { responseTemplate: id })],
+        edges: [{ id: "e1", source: "a2a", target: "out" }]
+      }) as Workflow;
+    expect((await call(context, "POST", "/api/workflows", builder.cookie, agent("wf-a2a-owner", "default", "researcher"))).statusCode).toBe(200);
+    const thief = await call(context, "POST", "/api/workflows", builder.cookie, agent("wf-a2a-thief", "p-other", "Researcher"));
+    expect(thief.statusCode).toBe(409);
+    expect(thief.json<{ error: string }>().error).toMatch(/A2A agent path "Researcher" is already used by workflow "Agent wf-a2a-owner" \(wf-a2a-owner\)/);
+    expect((await call(context, "POST", "/api/workflows/import", builder.cookie, { workflow: agent("wf-a2a-thief", "p-other", "researcher") })).statusCode).toBe(409);
+    const copy = await call(context, "POST", "/api/workflows/wf-a2a-owner/duplicate", builder.cookie, { name: "Copy" });
+    expect(copy.statusCode, copy.body).toBe(200);
+    expect(copy.json<Workflow>().nodes.find((entry) => entry.id === "a2a")!.config).toMatchObject({ path: "researcher-copy" });
   });
 
   it("a gated draft claims nothing: it saves onto a claimed path, never blocks the claimant, and cannot be published there (the cross-project probe)", async () => {

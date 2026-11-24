@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { A2AClientError, callA2AAgent, createDefaultA2ARegistry, type A2AFetch } from "./index";
+import { readBody } from "./adapters/jsonrpc";
 
 /** A remote agent answering in memory: a card at /.well-known/agent-card.json and a JSON-RPC endpoint at /rpc. */
 function fakeAgent(options: { version: "1.0" | "0.3"; workingPolls?: number; token?: string; error?: { code: number; message: string } }) {
@@ -93,7 +94,7 @@ describe("callA2AAgent over JSON-RPC", () => {
     await expect(callA2AAgent(createDefaultA2ARegistry(), { cardUrl: "ftp://agent.test", text: "q", context: { fetch: noCard }, timeoutMs: 5_000 })).rejects.toMatchObject({ kind: "unsupported" });
   });
 
-  it("never sends the token to an endpoint on another host than the card's", async () => {
+  it("never calls an endpoint on another host than the card's, with or without a token", async () => {
     const sent: string[] = [];
     const fetch: A2AFetch = async (url) => {
       sent.push(url);
@@ -104,6 +105,11 @@ describe("callA2AAgent over JSON-RPC", () => {
       message: expect.stringMatching(/another host/)
     });
     expect(sent).toEqual(["https://agent.test/.well-known/agent-card.json"]);
+    await expect(callA2AAgent(createDefaultA2ARegistry(), { cardUrl: "https://agent.test", text: "q", context: { fetch }, timeoutMs: 5_000 })).rejects.toMatchObject({
+      kind: "card",
+      message: expect.stringMatching(/another host/)
+    });
+    expect(sent).toEqual(["https://agent.test/.well-known/agent-card.json", "https://agent.test/.well-known/agent-card.json"]);
   });
 });
 
@@ -119,5 +125,31 @@ describe("the mock agent", () => {
     expect(await callA2AAgent(registry, { cardUrl: "mock-a2a://ask", text: "hi", context: { fetch }, timeoutMs: 1_000 })).toMatchObject({ state: "input-required", text: "Which year do you mean?" });
     expect(await callA2AAgent(registry, { cardUrl: "mock-a2a://fail", text: "hi", context: { fetch }, timeoutMs: 1_000 })).toMatchObject({ state: "failed" });
     expect(await callA2AAgent(registry, { cardUrl: "mock-a2a://slow", text: "hi", context: { fetch }, timeoutMs: 1_000, pollInitialMs: 1 })).toMatchObject({ state: "completed", text: "Done after a while." });
+  });
+});
+
+describe("reading an answer", () => {
+  it("stops a chunked answer with no Content-Length as soon as it passes the cap, and cancels the stream", async () => {
+    let pulled = 0;
+    let canceled = false;
+    const stream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulled += 1;
+        controller.enqueue(new Uint8Array(1024).fill(97));
+      },
+      cancel() {
+        canceled = true;
+      }
+    });
+    const response = new Response(stream, { headers: { "content-type": "application/json" } });
+    expect(response.headers.get("content-length")).toBeNull();
+    await expect(readBody(response, "agent's answer", 4096)).rejects.toMatchObject({ kind: "protocol", message: expect.stringMatching(/larger than 4096 bytes/) });
+    expect(canceled).toBe(true);
+    expect(pulled).toBeLessThan(10);
+  });
+
+  it("reads an answer under the cap whole, multi-byte characters included", async () => {
+    const text = JSON.stringify({ reply: "caf\u00e9 \u2713".repeat(100) });
+    expect(await readBody(new Response(text), "agent's answer", 1_000_000)).toBe(text);
   });
 });

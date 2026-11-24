@@ -86,6 +86,8 @@ export interface A2aRoutesDeps {
   /** The user an API key in `Authorization: Bearer` acts as, with at least `roles`; or why not. */
   apiKeyCaller: (request: FastifyRequest, roles: UserRole[]) => Promise<{ ok: true; user: SafeUser } | { ok: false; status: number; error: string }>;
   mayExecute: (user: SafeUser, workflowId: string) => Promise<boolean>;
+  /** Whose sessions a run by this caller uses, when they are kept to the caller (share-only runners, as /execute). */
+  sessionOwnerOptionFor: (user: SafeUser, workflow: Workflow) => Promise<{ sessionOwner?: string }>;
   requireRole: (request: FastifyRequest, reply: FastifyReply, roles: UserRole[]) => Promise<SafeUser | null>;
   runDispatcher: Pick<RunDispatcher, "run" | "start">;
   dispatchPoolOf: (workflow: Workflow) => string;
@@ -355,9 +357,16 @@ export function registerA2aRoutes(deps: A2aRoutesDeps): void {
     if (!input.text.trim() && input.data === undefined) {
       return a2aJsonRpcError(id, A2A_ERROR_CODES.invalidParams, "The message has no text or data part");
     }
-    // Production's version has unfinished settings: no run starts (the caller already passed the token check).
+    // Production's version has unfinished settings: no run starts. A caller with a token or key already passed its
+    // check and is told why; on a public agent only a signed-in editor is (anyone else gets "not found", as the MCP
+    // trigger's invoke route answers).
     const paused = await deps.pausedRefusal(found.workflow);
-    if (paused) return refuse(reply, id, 409, paused, "workflow_unfinished");
+    if (paused) {
+      if (a2aTriggerAuthMode(record(found.node.config)) === "public" && !(await deps.signedInEditorOf(request, found.workflow.id))) {
+        return refuse(reply, id, 404, AGENT_NOT_FOUND);
+      }
+      return refuse(reply, id, 409, paused, "workflow_unfinished");
+    }
 
     const executionId = crypto.randomUUID();
     const contextId = message.contextId?.trim() || crypto.randomUUID();
@@ -379,6 +388,9 @@ export function registerA2aRoutes(deps: A2aRoutesDeps): void {
         workflow: found.workflow,
         directInput: { trigger_type: A2A_TRIGGER_TYPE, trigger_node_id: found.node.id, user_prompt: input.text, a2a: a2aInput },
         sessionId: contextId,
+        // An API key caller's session memory is kept to them where /execute keeps it (share-only runners): a context id
+        // never reaches another person's sessions.
+        ...(auth.user ? { triggeredByUserId: auth.user.id, ...(await deps.sessionOwnerOptionFor(auth.user, found.workflow)) } : {}),
         ...(input.text ? { userPrompt: input.text } : {}),
         executionId,
         triggerType: A2A_TRIGGER_TYPE,

@@ -13902,6 +13902,7 @@ button{padding:10px 16px;background:#2b6cb0;color:#fff;border:none;border-radius
       return checked.ok ? { ok: true, user: checked.user } : { ok: false, status: checked.status, error: String(asRecord(checked.body).error ?? "Not allowed") };
     },
     mayExecute: async (user, workflowId) => (await runAccess.workflow(user, workflowId, "workflow:execute")).ok,
+    sessionOwnerOptionFor: async (user, workflow) => await sessionOwnerOptionFor(user, workflow),
     requireRole: (request, reply, roles) => requireRole(request, reply, roles),
     runDispatcher,
     dispatchPoolOf,

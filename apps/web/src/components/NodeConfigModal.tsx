@@ -10329,7 +10329,7 @@ export function NodeInspector({
               value: toStringValue(asRecord(config.secretRef).secretId),
               noneLabel: "No token",
               preferredProvider: "a2a",
-              hint: "Optional: sent as Authorization: Bearer to the agent (never to another host).",
+              hint: "Optional: sent as Authorization: Bearer to the agent.",
               onSelect: (next) =>
                 setConfig((current) => ({
                   ...current,
