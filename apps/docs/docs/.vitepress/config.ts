@@ -215,6 +215,7 @@ export default defineConfig({
         text: "Getting Started",
         items: [
           { text: "Install with Docker", link: "/getting-started/install" },
+          { text: "Deploy to a cloud host", link: "/getting-started/deploy-to-a-cloud-host" },
           { text: "Build your first MCP agent in 5 min", link: "/getting-started/build-your-first-mcp-agent" },
           { text: "Starter templates", link: "/getting-started/starter-templates" },
           { text: "Quickstart", link: "/getting-started/quickstart" },
