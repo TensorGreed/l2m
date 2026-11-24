@@ -7,7 +7,8 @@ connect any MCP server, and control every tool call with approvals, budgets and 
 
 [Live demo in your browser](https://lsquarem.com/demo/) · [Docs](https://lsquarem.com/docs/) ·
 [5-minute tutorial](https://lsquarem.com/docs/getting-started/build-your-first-mcp-agent) ·
-[Templates](https://lsquarem.com/docs/recipes/)
+[Templates](https://lsquarem.com/docs/recipes/) ·
+[Video: a human approves before your agent writes (2:42)](https://www.youtube.com/watch?v=rBfi0cNOGh0)
 
 ![The L2M studio: an agent with its chat model, memory and MCP tools, and the run tape of a finished run](docs/assets/screens/studio-run.webp)
 
