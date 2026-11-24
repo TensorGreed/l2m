@@ -1,0 +1,134 @@
+# L2M on DigitalOcean App Platform: the app spec behind the "Deploy to DigitalOcean" button
+# (https://cloud.digitalocean.com/apps/new?repo=https://github.com/TensorGreed/l2m/tree/main).
+# Everything it creates runs in, and is billed to, the DigitalOcean account of whoever clicks the button.
+#
+#   web  the studio (ghcr.io/tensorgreed/l2m-web) at the app's https address.
+#   api  the API (ghcr.io/tensorgreed/l2m). The app's router sends /api, /webhook, /webhook-test, /mcp, /v1 and
+#        /health straight to it; everything else goes to the studio.
+#   db   a Dev Database (PostgreSQL). App Platform has no persistent disks, so the data lives here.
+#
+# Before you create the app, set two values on the api component (Edit next to its environment variables):
+#   SECRET_MASTER_KEY_BASE64   32 random bytes, base64: run `openssl rand -base64 32`. It encrypts stored secrets;
+#                              keep a copy, since a restored database cannot read its secrets without it.
+#   BOOTSTRAP_ADMIN_PASSWORD   the first admin's password (at least 8 characters; the placeholder is refused).
+# Then sign in as admin@l2m.local (BOOTSTRAP_ADMIN_EMAIL) with that password.
+#
+# Upgrade: change both image tags (Settings → each component → Source) to the new release.
+# Guide: https://lsquarem.com/docs/getting-started/deploy-to-a-cloud-host
+
+spec:
+  name: l2m
+  services:
+    - name: api
+      image:
+        registry_type: GHCR
+        registry: tensorgreed
+        repository: l2m
+        tag: v0.1.0
+      http_port: 4000
+      # The API uses about 400-500 MB once started.
+      instance_size_slug: apps-s-1vcpu-1gb
+      instance_count: 1
+      health_check:
+        http_path: /health
+        initial_delay_seconds: 20
+      envs:
+        - key: DB_TYPE
+          value: postgres
+          scope: RUN_TIME
+        - key: DB_POSTGRESDB_URL
+          value: ${db.DATABASE_URL}
+          scope: RUN_TIME
+          type: SECRET
+        # The database's certificate is signed by DigitalOcean's own CA; this lets the API verify it.
+        - key: DB_POSTGRESDB_SSL_CA
+          value: ${db.CA_CERT}
+          scope: RUN_TIME
+        - key: SECRET_MASTER_KEY_BASE64
+          value: CHANGE
+          scope: RUN_TIME
+          type: SECRET
+        - key: BOOTSTRAP_ADMIN_EMAIL
+          value: admin@l2m.local
+          scope: RUN_TIME
+        - key: BOOTSTRAP_ADMIN_PASSWORD
+          value: CHANGE
+          scope: RUN_TIME
+          type: SECRET
+        # App Platform serves the app over HTTPS only.
+        - key: COOKIE_SECURE
+          value: "true"
+          scope: RUN_TIME
+        - key: AUTH_ALLOW_PUBLIC_REGISTER
+          value: "false"
+          scope: RUN_TIME
+        - key: WEB_ORIGIN
+          value: ${APP_URL}
+          scope: RUN_TIME
+        - key: APP_PUBLIC_URL
+          value: ${APP_URL}
+          scope: RUN_TIME
+
+    - name: web
+      image:
+        registry_type: GHCR
+        registry: tensorgreed
+        repository: l2m-web
+        tag: v0.1.0
+      # nginx in the image listens on port 80. Its own proxy to api:4000 (the component above) is a fallback; the
+      # router below sends the API routes to the api component directly.
+      http_port: 80
+      instance_size_slug: apps-s-1vcpu-0.5gb
+      instance_count: 1
+      health_check:
+        http_path: /
+
+  # The same routes the studio's nginx forwards (apps/web/nginx.conf).
+  ingress:
+    rules:
+      - match:
+          path:
+            prefix: /api/
+        component:
+          name: api
+          preserve_path_prefix: true
+      - match:
+          path:
+            prefix: /webhook/
+        component:
+          name: api
+          preserve_path_prefix: true
+      - match:
+          path:
+            prefix: /webhook-test/
+        component:
+          name: api
+          preserve_path_prefix: true
+      - match:
+          path:
+            prefix: /mcp/
+        component:
+          name: api
+          preserve_path_prefix: true
+      - match:
+          path:
+            prefix: /v1/
+        component:
+          name: api
+          preserve_path_prefix: true
+      - match:
+          path:
+            prefix: /health
+        component:
+          name: api
+          preserve_path_prefix: true
+      - match:
+          path:
+            prefix: /
+        component:
+          name: web
+
+  databases:
+    - name: db
+      engine: PG
+      production: false

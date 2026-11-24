@@ -1,0 +1,74 @@
+# L2M on Render: the Blueprint behind the "Deploy to Render" button (https://render.com/deploy?repo=https://github.com/TensorGreed/l2m).
+# Everything it creates runs in, and is billed to, the Render workspace of whoever clicks the button.
+#
+#   l2m      the studio (ghcr.io/tensorgreed/l2m-web), the public https://<name>.onrender.com address. It forwards /api,
+#            /webhook, /webhook-test, /mcp, /v1 and /health to l2m-api over Render's private network.
+#   l2m-api  the API (ghcr.io/tensorgreed/l2m), a private service with no public address.
+#   l2m-db   Render Postgres, reachable only from the private network. Workflows, runs, users and encrypted secrets
+#            live here.
+#
+# Sign in as admin@l2m.local with the generated password: l2m-api → Environment → BOOTSTRAP_ADMIN_PASSWORD. The master
+# key that encrypts stored secrets is generated the same way (SECRET_MASTER_KEY_BASE64); keep it with your database
+# backups, since a restored database cannot read its secrets without it.
+#
+# Upgrade: change both image tags below (or each service's image in the dashboard) to the new release, then deploy.
+# Guide: https://lsquarem.com/docs/getting-started/deploy-to-a-cloud-host
+
+services:
+  - type: web
+    name: l2m
+    runtime: image
+    image:
+      url: ghcr.io/tensorgreed/l2m-web:v0.1.0
+    # Free web services sleep after 15 idle minutes and take about a minute to wake, webhooks and gateway calls
+    # included; pick a paid instance type in the dashboard to keep the studio awake. Free services may still reach
+    # the private API and database.
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      # nginx in the image listens on port 80.
+      - key: PORT
+        value: "80"
+      # The API's private address (host:port); the image's default, api:4000, is a Docker Compose name.
+      - key: L2M_API_UPSTREAM
+        fromService:
+          type: pserv
+          name: l2m-api
+          property: hostport
+
+  - type: pserv
+    name: l2m-api
+    runtime: image
+    image:
+      url: ghcr.io/tensorgreed/l2m:v0.1.0
+    # The API uses about 400-500 MB once started, more than the 512 MB instance type leaves room for.
+    plan: 1c-2g
+    envVars:
+      - key: DB_TYPE
+        value: postgres
+      - key: DB_POSTGRESDB_URL
+        fromDatabase:
+          name: l2m-db
+          property: connectionString
+      # 32 random bytes, base64: the key that encrypts stored secrets.
+      - key: SECRET_MASTER_KEY_BASE64
+        generateValue: true
+      - key: BOOTSTRAP_ADMIN_EMAIL
+        value: admin@l2m.local
+      # Used once, to create the first admin. Change the password in the studio after signing in.
+      - key: BOOTSTRAP_ADMIN_PASSWORD
+        generateValue: true
+      # Render serves the studio over HTTPS only.
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: AUTH_ALLOW_PUBLIC_REGISTER
+        value: "false"
+
+databases:
+  - name: l2m-db
+    # The smallest paid instance type; Render's free databases expire after a limited time.
+    plan: 0.1c-256mb
+    databaseName: l2m
+    user: l2m
+    # No connections from the internet: only services in this workspace's private network.
+    ipAllowList: []
