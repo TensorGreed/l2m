@@ -18,15 +18,38 @@ import { A2AClientError, type A2ACallContext, type A2AClientAdapter, type A2ARes
 /** The most a card or a JSON-RPC answer may weigh. A bigger one is refused, not read. */
 export const A2A_MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
 
-async function readBody(response: Response, what: string): Promise<string> {
+/**
+ * The body as text, read chunk by chunk and stopped (the stream canceled) as soon as it passes the cap, so an answer
+ * without a Content-Length (chunked) is never held in memory past A2A_MAX_RESPONSE_BYTES.
+ */
+export async function readBody(response: Response, what: string, maxBytes: number = A2A_MAX_RESPONSE_BYTES): Promise<string> {
+  const tooLarge = () => new A2AClientError("protocol", `The ${what} is larger than ${maxBytes} bytes.`);
   const declared = Number(response.headers.get("content-length") ?? "");
-  if (Number.isFinite(declared) && declared > A2A_MAX_RESPONSE_BYTES) {
+  if (Number.isFinite(declared) && declared > maxBytes) {
     await response.body?.cancel().catch(() => undefined);
-    throw new A2AClientError("protocol", `The ${what} is larger than ${A2A_MAX_RESPONSE_BYTES} bytes.`);
+    throw tooLarge();
   }
-  const text = await response.text();
-  if (text.length > A2A_MAX_RESPONSE_BYTES) throw new A2AClientError("protocol", `The ${what} is larger than ${A2A_MAX_RESPONSE_BYTES} bytes.`);
-  return text;
+  if (!response.body) return "";
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel().catch(() => undefined);
+      throw tooLarge();
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
 }
 
 function headersFor(context: A2ACallContext, extra: Record<string, string> = {}): Headers {
