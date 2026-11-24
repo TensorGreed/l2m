@@ -736,4 +736,29 @@ describe("no difference between someone else's run and a missing one, and read s
     expect(manual.statusCode, manual.body).toBe(200);
     expect(await context.store.getExecutionSessionOwner(manual.json<{ executionId: string }>().executionId)).toBe(gus.id);
   });
+
+  it("an execute-share runner calling an A2A agent with an API key gets sessions of their own: a context id reaches no one else's", async () => {
+    const { context, owner, gus } = await seed();
+    const agent: Workflow = {
+      ...echoWorkflow("wf-a2a-shared"),
+      nodes: [
+        { id: "start", type: "a2a_trigger", name: "Agent", position: { x: 0, y: 0 }, config: { path: "shared-agent" } },
+        { id: "out", type: "output", name: "Out", position: { x: 200, y: 0 }, config: { responseTemplate: "ok" } }
+      ]
+    };
+    await context.store.upsertWorkflow(agent);
+    const shared = await call(context, "POST", "/api/workflows/wf-a2a-shared/user-shares", owner.cookie, { email: gus.email, accessLevel: "execute" });
+    expect(shared.statusCode, shared.body).toBeLessThan(300);
+    const key = (await call(context, "POST", "/api/auth/api-keys", gus.cookie, { name: "a2a" })).json<{ key: string }>().key;
+    const sent = await context.app.inject({
+      method: "POST",
+      url: "/a2a/shared-agent",
+      headers: { authorization: `Bearer ${key}` },
+      payload: { jsonrpc: "2.0", id: 1, method: "SendMessage", params: { message: { messageId: "m", role: "ROLE_USER", contextId: "owens-session", parts: [{ text: "hi" }] } } }
+    });
+    expect(sent.statusCode, sent.body).toBe(200);
+    const taskId = sent.json<{ result: { task: { id: string } } }>().result.task.id;
+    expect(await context.store.getExecutionSessionOwner(taskId)).toBe(gus.id);
+    expect(await context.store.getExecutionStarter(taskId)).toBe(gus.id);
+  });
 });

@@ -86,6 +86,8 @@ export interface A2aRoutesDeps {
   /** The user an API key in `Authorization: Bearer` acts as, with at least `roles`; or why not. */
   apiKeyCaller: (request: FastifyRequest, roles: UserRole[]) => Promise<{ ok: true; user: SafeUser } | { ok: false; status: number; error: string }>;
   mayExecute: (user: SafeUser, workflowId: string) => Promise<boolean>;
+  /** Whose sessions a run by this caller uses, when they are kept to the caller (share-only runners, as /execute). */
+  sessionOwnerOptionFor: (user: SafeUser, workflow: Workflow) => Promise<{ sessionOwner?: string }>;
   requireRole: (request: FastifyRequest, reply: FastifyReply, roles: UserRole[]) => Promise<SafeUser | null>;
   runDispatcher: Pick<RunDispatcher, "run" | "start">;
   dispatchPoolOf: (workflow: Workflow) => string;
@@ -379,6 +381,9 @@ export function registerA2aRoutes(deps: A2aRoutesDeps): void {
         workflow: found.workflow,
         directInput: { trigger_type: A2A_TRIGGER_TYPE, trigger_node_id: found.node.id, user_prompt: input.text, a2a: a2aInput },
         sessionId: contextId,
+        // An API key caller's session memory is kept to them where /execute keeps it (share-only runners): a context id
+        // never reaches another person's sessions.
+        ...(auth.user ? { triggeredByUserId: auth.user.id, ...(await deps.sessionOwnerOptionFor(auth.user, found.workflow)) } : {}),
         ...(input.text ? { userPrompt: input.text } : {}),
         executionId,
         triggerType: A2A_TRIGGER_TYPE,
