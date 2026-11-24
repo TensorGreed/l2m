@@ -247,6 +247,30 @@ describe("the A2A endpoint", () => {
   });
 });
 
+describe("an unfinished production version", () => {
+  it("answers workflow_unfinished to a caller with a token, and not found to anyone on a public agent but a signed-in editor", async () => {
+    const ctx = await context();
+    const secretId = await bearerSecret(ctx, "tok");
+    // An A2A Agent step with no Agent URL: a saved draft may have it, production does not run it.
+    const unfinished = { nodes: [testNode("remote", "a2a_agent", {})] };
+    await ctx.store.upsertWorkflow(agentWorkflow("wf-open", { authMode: "public" }, unfinished));
+    await ctx.store.upsertWorkflow(agentWorkflow("wf-closed", { authMode: "bearer", secretRef: { secretId } }, unfinished));
+
+    const anonymous = await rpc(ctx, "agent-wf-open", send("x"));
+    expect(anonymous.statusCode).toBe(404);
+    expect(anonymous.body).not.toMatch(/unfinished/);
+    const admin = await loginAs(ctx, "admin");
+    const editor = await ctx.app.inject({ method: "POST", url: "/a2a/agent-wf-open", headers: { cookie: admin.cookie }, payload: send("x") });
+    expect(editor.statusCode).toBe(409);
+    expect(editor.json()).toMatchObject({ error: { data: { code: "workflow_unfinished" } } });
+
+    const withToken = await rpc(ctx, "agent-wf-closed", send("x"), { authorization: "Bearer tok" });
+    expect(withToken.statusCode).toBe(409);
+    expect(withToken.json()).toMatchObject({ error: { data: { code: "workflow_unfinished" } } });
+    expect((await ctx.store.listExecutionHistory({ page: 1, pageSize: 10 })).total).toBe(0);
+  });
+});
+
 describe("L2M calling L2M over A2A", () => {
   it("a workflow's A2A Agent node calls another workflow's A2A endpoint over HTTP, with its token from a secret", async () => {
     const ctx = await context();

@@ -357,9 +357,16 @@ export function registerA2aRoutes(deps: A2aRoutesDeps): void {
     if (!input.text.trim() && input.data === undefined) {
       return a2aJsonRpcError(id, A2A_ERROR_CODES.invalidParams, "The message has no text or data part");
     }
-    // Production's version has unfinished settings: no run starts (the caller already passed the token check).
+    // Production's version has unfinished settings: no run starts. A caller with a token or key already passed its
+    // check and is told why; on a public agent only a signed-in editor is (anyone else gets "not found", as the MCP
+    // trigger's invoke route answers).
     const paused = await deps.pausedRefusal(found.workflow);
-    if (paused) return refuse(reply, id, 409, paused, "workflow_unfinished");
+    if (paused) {
+      if (a2aTriggerAuthMode(record(found.node.config)) === "public" && !(await deps.signedInEditorOf(request, found.workflow.id))) {
+        return refuse(reply, id, 404, AGENT_NOT_FOUND);
+      }
+      return refuse(reply, id, 409, paused, "workflow_unfinished");
+    }
 
     const executionId = crypto.randomUUID();
     const contextId = message.contextId?.trim() || crypto.randomUUID();
