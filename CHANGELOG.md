@@ -6,6 +6,11 @@ All notable changes to L2M are documented here. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+### Fixed
+- **A failed model call fails the run.** When an agent's model call failed before the agent had answered (the model server answered 404 "model not found", refused the connection or timed out), the agent's node used to succeed with the provider's error as its answer, so the run was reported as a success with an empty output. The node now fails with the provider's error: `POST /api/webhooks/execute` answers 400 with `status: "error"`, the stream ends with an error result, and Runs shows the failed step. An agent that answered before a later model call failed still keeps that answer.
+- **VS Code extension 0.1.1: readable errors.** A failed model call shows one short message in the chat (`The model call failed: <provider message>. Check the chat model settings of workflow <id> in L2M.`) instead of the raw run JSON; other failed runs name the failed node, and the full response goes to the **L2M Agent** output channel. It does the same for servers that still report such a run as a success. The extension is also listed on [Open VSX](https://open-vsx.org/extension/l2m/vscode-l2m-agent) (for VSCodium, Cursor and other editors that use it); the README, the VS Code extension guide and the VS Code recipe link to both stores.
+- **Release: the Docker Hub signature check waits for Docker Hub.** The mirror job's `cosign verify` now tries up to 8 times, 30 seconds apart, with one log line per try, and fails after the last, instead of failing the release when Docker Hub has not served a just-pushed signature yet.
+
 ## [0.1.1] - 2026-11-24
 
 A2A agents in both directions, deploy buttons for Render and DigitalOcean, and the VS Code extension in the stores. Release notes: [release-notes/v0.1.1.md](release-notes/v0.1.1.md).
