@@ -506,7 +506,7 @@
       "steps": [
         "Point the **Chat Model** node at a model you have: pull `qwen2.5:7b` into Ollama, or switch the provider to OpenAI, Anthropic or any OpenAI-compatible endpoint with its key as a stored secret. A larger model follows the JSON contract more reliably. Save.",
         "Create an API key in **Settings → Account → API Keys** (a builder role or above can run workflows). It is shown once.",
-        "Install **L2M Agent** from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=l2m.vscode-l2m-agent), or run `code --install-extension l2m.vscode-l2m-agent`. See [VS Code extension](/getting-started/vscode-extension#install).",
+        "Install **L2M Agent** from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=l2m.vscode-l2m-agent) or [Open VSX](https://open-vsx.org/extension/l2m/vscode-l2m-agent), or run `code --install-extension l2m.vscode-l2m-agent`. See [VS Code extension](/getting-started/vscode-extension#install).",
         "In VS Code settings, set `l2mAgent.apiBaseUrl` (default `http://localhost:4000`), `l2mAgent.workflowId` to `wf-vscode-l2m-coding-agent` (or leave it empty to find the workflow by its webhook path), and `l2mAgent.authToken` to the key. Put the key in your user settings, not in a workspace `settings.json` that might be committed.",
         "Open **L2M Agent** in the Activity Bar and ask for a change in the open file."
       ],

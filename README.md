@@ -88,7 +88,7 @@ and the [Blog](https://lsquarem.com/docs/blog/).
 | Render PDFs, parse model output | [Core nodes](https://lsquarem.com/docs/nodes/core-nodes) |
 | Add a provider, connector or MCP adapter | [Providers](https://lsquarem.com/docs/extensions/providers), [Connectors](https://lsquarem.com/docs/extensions/connectors), [MCP](https://lsquarem.com/docs/extensions/mcp) |
 | Ship a community node package | [Community nodes](https://lsquarem.com/docs/extensions/community-nodes), [l2m-nodes-template](https://github.com/TensorGreed/l2m-nodes-template) |
-| Use the VS Code extension | [Install from the Marketplace](https://marketplace.visualstudio.com/items?itemName=l2m.vscode-l2m-agent) · [setup guide](https://lsquarem.com/docs/getting-started/vscode-extension) |
+| Use the VS Code extension | [Install from the Marketplace](https://marketplace.visualstudio.com/items?itemName=l2m.vscode-l2m-agent) or [Open VSX](https://open-vsx.org/extension/l2m/vscode-l2m-agent) · [setup guide](https://lsquarem.com/docs/getting-started/vscode-extension) |
 | Verify a release image | [Verify a release](https://lsquarem.com/docs/operations/verify-a-release) |
 
 Reference projects (helpdesk agent, support triage, VS Code repo reviewer) are in

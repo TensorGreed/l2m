@@ -17,7 +17,7 @@ The L2M VS Code extension turns any L2M workflow into a coding agent inside the 
 
 ## Install
 
-Install **L2M Agent** from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=l2m.vscode-l2m-agent): search for "L2M Agent" in the Extensions view, or run:
+Install **L2M Agent** from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=l2m.vscode-l2m-agent) or, in VSCodium, Cursor and other editors that use Open VSX, from [Open VSX](https://open-vsx.org/extension/l2m/vscode-l2m-agent): search for "L2M Agent" in the Extensions view, or run:
 
 ```bash
 code --install-extension l2m.vscode-l2m-agent
