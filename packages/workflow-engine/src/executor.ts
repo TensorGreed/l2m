@@ -7925,6 +7925,12 @@ async function executeNodeHandler(
           });
         }
 
+        // The run ended on an error, not on an answer (the model call failed before anything was answered): the node
+        // fails with it, so the run is not reported as a success whose answer is the provider's error text.
+        if (agentState.stopReason === "error" && agentState.failure) {
+          throw agentState.failure;
+        }
+
         // Phase 10.5 — tokens spent answering the servers' sampling requests
         // count in the node's usage (and so in the run's cost).
         const samplingUsage = agentMcp.samplingHandler.usage();
