@@ -72,7 +72,7 @@ Add an **A2A Agent** node and set its **Agent URL**: the remote agent's base URL
 | Field | Default | Description |
 |---|---|---|
 | `cardUrl` | (required) | The agent's base URL or card URL. `/.well-known/agent-card.json` is added when missing. |
-| `secretRef` | none | A secret whose value is sent as `Authorization: Bearer`. It goes only to the host in the Agent URL: a card that names an endpoint on another host is refused while a token is set. |
+| `secretRef` | none | A secret whose value is sent as `Authorization: Bearer` to the agent. |
 | `messageTemplate` | <span v-pre>`{{user_prompt}}`</span> | The message to send. |
 | `timeoutMs` | `120000` | How long the remote task may take. On timeout the node cancels the task there and fails. |
 | `toolDescription` | a generic line naming the node | What a Supervisor reads about this worker. Describe what the agent is good at. |
@@ -92,7 +92,9 @@ When the supervisor has write-tool approval on, each call to an A2A worker pause
 
 ### Outbound rules
 
-Every request to a remote agent, the card and the endpoint, goes through the deployment's outbound URL rules: cloud metadata and link-local addresses are always refused, private addresses are refused under `OUTBOUND_DENY_PRIVATE` unless allowlisted, the connection is pinned to the checked address, and redirects are checked again. Destination rules apply to the message sent.
+L2M calls only the host in the Agent URL: a card that names an endpoint on another host is refused, so use the card URL on the endpoint's own host.
+
+Every request to a remote agent, the card and the endpoint, goes through the deployment's outbound URL rules: cloud metadata and link-local addresses are always refused, private addresses are refused under `OUTBOUND_DENY_PRIVATE` unless allowlisted, the connection is pinned to the checked address, and redirects are checked again. Destination rules apply to the message sent, and to each redirect before it is followed. A token is never sent on a redirect to another host.
 
 ### Try it without a remote agent
 

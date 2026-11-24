@@ -51,11 +51,17 @@ export interface A2aAgentNodeOutput {
 }
 
 /** A fetch through the outbound URL guard (pinned connection, redirects re-checked). */
-export function guardedA2AFetch(options: { outboundGuard?: OutboundGuardConfig; outboundDnsResolver?: (hostname: string) => Promise<string[]> }): A2AFetch {
+export function guardedA2AFetch(options: {
+  outboundGuard?: OutboundGuardConfig;
+  outboundDnsResolver?: (hostname: string) => Promise<string[]>;
+  /** Phase 16 — each redirect hop judged again by the destination rules before it is followed. */
+  onRedirect?: (url: string) => Promise<void>;
+}): A2AFetch {
   return async (url, init) =>
     await guardedFetch(url, init, {
       config: options.outboundGuard ?? DEFAULT_OUTBOUND_GUARD,
-      ...(options.outboundDnsResolver ? { resolver: options.outboundDnsResolver } : {})
+      ...(options.outboundDnsResolver ? { resolver: options.outboundDnsResolver } : {}),
+      ...(options.onRedirect ? { onRedirect: options.onRedirect } : {})
     });
 }
 

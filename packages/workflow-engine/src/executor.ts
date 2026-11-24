@@ -4503,8 +4503,9 @@ async function outboundPreCheck(
   const checked = await checkEgressRequest(request, common);
   if (checked.declassified.length > 0) context.labelScope?.declassify(checked.declassified);
   const first = request;
+  // HTTP Request and A2A Agent follow redirects themselves (guardedFetch): each hop is judged before it is followed.
   const onRedirect =
-    node.type === "http_request"
+    node.type === "http_request" || node.type === "a2a_agent"
       ? async (url: string) => {
           const chain = [...first.refs, httpDestinationRef(url)];
           first.refs.push(chain[chain.length - 1]!);
@@ -8768,7 +8769,11 @@ async function executeNodeHandler(
           message,
           ...(token ? { token } : {}),
           registry: dependencies.a2aRegistry ?? defaultA2ARegistry(),
-          fetch: guardedA2AFetch(dependencies),
+          fetch: guardedA2AFetch({
+            ...(dependencies.outboundGuard ? { outboundGuard: dependencies.outboundGuard } : {}),
+            ...(dependencies.outboundDnsResolver ? { outboundDnsResolver: dependencies.outboundDnsResolver } : {}),
+            ...(outbound?.onRedirect ? { onRedirect: outbound.onRedirect } : {})
+          }),
           ...(dependencies.abortSignal ? { signal: dependencies.abortSignal } : {}),
           runAborted: () => Boolean(dependencies.abortSignal?.aborted)
         });

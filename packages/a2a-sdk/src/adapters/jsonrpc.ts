@@ -77,11 +77,12 @@ export class JsonRpcA2AAdapter implements A2AClientAdapter {
     // A relative endpoint is read against the card's own URL.
     const resolvedUrl = new URL(endpoint.url, url).toString();
     if (!/^https?:\/\//i.test(resolvedUrl)) throw new A2AClientError("card", `The agent card at ${hostOf(url)} names an endpoint that is not http(s).`);
-    // The token goes only to the host the node names: a card cannot send it elsewhere.
-    if (context.token && new URL(resolvedUrl).origin !== new URL(url).origin) {
+    // Messages (and the token) go only to the host the node names, the one its outbound checks judged: a card cannot
+    // send them elsewhere.
+    if (new URL(resolvedUrl).origin !== new URL(url).origin) {
       throw new A2AClientError(
         "card",
-        `The agent card at ${hostOf(url)} names an endpoint on another host (${hostOf(resolvedUrl)}). L2M sends the token only to the host in the Agent URL: use the endpoint's own card URL.`
+        `The agent card at ${hostOf(url)} names an endpoint on another host (${hostOf(resolvedUrl)}). L2M calls only the host in the Agent URL: use the card URL on the endpoint's own host.`
       );
     }
     return { cardUrl: url, card: parsed.data, endpoint: { ...endpoint, url: resolvedUrl } };

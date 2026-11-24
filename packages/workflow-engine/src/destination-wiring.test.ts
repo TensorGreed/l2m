@@ -316,6 +316,20 @@ describe("egress checkpoint", () => {
     expect(redirect.verdict.destination).toMatchObject({ host: "127.0.0.2", tier: "public" });
   });
 
+  it("judges an A2A Agent's redirect hop the same way, and stops before following it", async () => {
+    const harness = guardDeps(["block"], { rows: PUBLIC_SECOND_HOP });
+    const before = received.length;
+    const a2a = workflow(
+      [node("in", "webhook_input"), node("agent", "a2a_agent", { cardUrl: `${base}/redirect-agent`, messageTemplate: "{{user_prompt}}" }), node("out", "output")],
+      [{ source: "in", target: "agent" }, { source: "agent", target: "out" }]
+    );
+    const result = await executeWorkflow({ workflow: a2a, executionId: "e8a", webhookPayload: { user_prompt: `card ${CARD}` } }, deps({ guard: harness.guard }));
+    expect(result.status).toBe("error");
+    expect(received.length).toBe(before + 1);
+    expect(resultOf(result, "agent")?.error).toContain("redirected to 127.0.0.2");
+    expect(harness.events.at(-1)!.verdict.destination).toMatchObject({ host: "127.0.0.2", tier: "public" });
+  });
+
   it("require_approval pauses through the approval inbox and runs the request once approved", async () => {
     const paused: WorkflowExecutionState[] = [];
     const harness = guardDeps(["approval"], { rows: PUBLIC_LOCALHOST });
