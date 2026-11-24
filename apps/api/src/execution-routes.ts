@@ -891,72 +891,98 @@ export function registerExecutionRoutes(deps: ExecutionRoutesDeps): void {
       typeof reasonRecord.reason === "string" && reasonRecord.reason.trim()
         ? reasonRecord.reason.trim()
         : `Execution canceled by ${user.email}`;
-    const active = activeExecutions.get(request.params.id);
-    // The run already hit its time limit and is ending; it is saved as a timeout error, not a cancel.
-    if (active && isExecutionTimeoutAbort(active.controller.signal)) {
+    const outcome = await cancelRun({ store, activeExecutions, approvalService, clusterMode, announce }, execution, reason, user);
+    if (outcome.kind === "timing_out") {
       reply.code(409);
       return { error: "Execution already timed out and is stopping" };
     }
-    const waiting = execution.status === "waiting_approval";
-    // A paused run belongs to whoever moves it first: the cancel takes the pending request (a decision that took it
-    // already wins), then cancels the history and drops the paused state in one write that refuses once a
-    // decision has claimed that state.
-    // A waiting run that is active here is a decided run resuming in this process (a resume writes no progress, so
-    // its history still reads waiting): it is stopped like a running run, whatever the decision was.
-    const resumingHere = waiting && Boolean(active);
-    if (waiting && (await approvalService.cancelForExecution(execution.id, reason, user)) === "decided" && !resumingHere) {
-      reply.code(409);
-      return { error: "The approval was already decided, so the run is resuming. It cannot be canceled while it waits any more." };
-    }
-    // Aborted before the write: the run's own final write is then skipped, so it cannot replace the canceled
-    // record; a run that finished first makes the conditional write refuse (409).
-    active?.controller.abort(reason);
-    const completedAt = new Date().toISOString();
-    const { outcome, canceledRequestIds } = await store.cancelExecution({
-      id: request.params.id,
-      onlyFrom: resumingHere ? ["waiting_approval", "running", "partial"] : waiting ? ["waiting_approval"] : ["running", "partial"],
-      completedAt,
-      error: reason,
-      deletePausedState: waiting,
-      cancelClaimed: resumingHere
-    });
-    if (outcome === "missing") {
+    if (outcome.kind === "missing") {
       reply.code(404);
       return { error: "Execution not found" };
     }
-    if (outcome === "decided") {
+    if (outcome.kind === "decided") {
       reply.code(409);
       return { error: "The approval was already decided, so the run is resuming. It cannot be canceled while it waits any more." };
     }
-    // The run this cancel aborted can record its own canceled ending (with its node results) before the write above
-    // commits: the cancel took effect, so it is not refused.
-    const recordedByRun = outcome === "not_cancelable" && Boolean(active) && (await store.getExecutionHistory(request.params.id))?.status === "canceled";
-    if (outcome === "not_cancelable" && !recordedByRun) {
+    if (outcome.kind === "not_cancelable") {
       reply.code(409);
       return { error: "Only running or waiting executions can be canceled" };
     }
-    // Phase 13.1 — cluster mode: a run that is not executing here may be executing on another instance. The canceled
-    // record is stored, so the instance running it stops it on this message, or at its next cancel check if the
-    // message is lost.
-    const abortSignalled = clusterMode && !active;
-    // The reason is cut and cleaned for the bus; the run's stored record keeps the full one.
-    if (abortSignalled) announce({ t: "cancel", id: request.params.id, reason: clusterCancelReason(reason) });
-
-    await approvalService.auditCanceledRequests(canceledRequestIds, user);
+    const { abortedActiveRun, abortSignalled, completedAt } = outcome;
     await auditRunAction(
       request,
       user,
       "execution.cancel_requested",
       { executionId: execution.id, workflowId: execution.workflowId, projectId: (await store.getWorkflow(execution.workflowId))?.projectId },
-      { abortedActiveRun: Boolean(active), previousStatus: execution.status, ...(abortSignalled ? { abortSignalled } : {}) }
+      { abortedActiveRun, previousStatus: execution.status, ...(abortSignalled ? { abortSignalled } : {}) }
     );
     return {
       ok: true,
       id: request.params.id,
       status: "canceled",
-      abortedActiveRun: Boolean(active),
+      abortedActiveRun,
       ...(abortSignalled ? { abortSignalled } : {}),
       completedAt
     };
   });
+}
+
+/** What a run cancel did (cancelRun). */
+export type RunCancelOutcome =
+  | { kind: "canceled"; abortedActiveRun: boolean; abortSignalled: boolean; completedAt: string }
+  | { kind: "timing_out" }
+  | { kind: "missing" }
+  | { kind: "decided" }
+  | { kind: "not_cancelable" };
+
+/**
+ * Cancels a running or waiting run: the one way a run is stopped on request (POST /api/executions/:id/cancel, an A2A
+ * caller's CancelTask). `execution` is the run's stored record, already found cancelable by its status; `user` is who
+ * asked (null for a caller that is not a signed-in person). A paused run belongs to whoever moves it first: the cancel
+ * takes the pending request (a decision that took it already wins), then cancels the history and drops the paused state
+ * in one write that refuses once a decision has claimed that state.
+ */
+export async function cancelRun(
+  deps: Pick<ExecutionRoutesDeps, "store" | "activeExecutions" | "approvalService" | "clusterMode" | "announce">,
+  execution: { id: string; status: string },
+  reason: string,
+  user: SafeUser | null
+): Promise<RunCancelOutcome> {
+  const { store, activeExecutions, approvalService, clusterMode, announce } = deps;
+  const active = activeExecutions.get(execution.id);
+  // The run already hit its time limit and is ending; it is saved as a timeout error, not a cancel.
+  if (active && isExecutionTimeoutAbort(active.controller.signal)) return { kind: "timing_out" };
+  const waiting = execution.status === "waiting_approval";
+  // A waiting run that is active here is a decided run resuming in this process (a resume writes no progress, so
+  // its history still reads waiting): it is stopped like a running run, whatever the decision was.
+  const resumingHere = waiting && Boolean(active);
+  if (waiting && (await approvalService.cancelForExecution(execution.id, reason, user)) === "decided" && !resumingHere) {
+    return { kind: "decided" };
+  }
+  // Aborted before the write: the run's own final write is then skipped, so it cannot replace the canceled
+  // record; a run that finished first makes the conditional write refuse.
+  active?.controller.abort(reason);
+  const completedAt = new Date().toISOString();
+  const { outcome, canceledRequestIds } = await store.cancelExecution({
+    id: execution.id,
+    onlyFrom: resumingHere ? ["waiting_approval", "running", "partial"] : waiting ? ["waiting_approval"] : ["running", "partial"],
+    completedAt,
+    error: reason,
+    deletePausedState: waiting,
+    cancelClaimed: resumingHere
+  });
+  if (outcome === "missing") return { kind: "missing" };
+  if (outcome === "decided") return { kind: "decided" };
+  // The run this cancel aborted can record its own canceled ending (with its node results) before the write above
+  // commits: the cancel took effect, so it is not refused.
+  const recordedByRun = outcome === "not_cancelable" && Boolean(active) && (await store.getExecutionHistory(execution.id))?.status === "canceled";
+  if (outcome === "not_cancelable" && !recordedByRun) return { kind: "not_cancelable" };
+  // Phase 13.1 — cluster mode: a run that is not executing here may be executing on another instance. The canceled
+  // record is stored, so the instance running it stops it on this message, or at its next cancel check if the
+  // message is lost.
+  const abortSignalled = clusterMode && !active;
+  // The reason is cut and cleaned for the bus; the run's stored record keeps the full one.
+  if (abortSignalled) announce({ t: "cancel", id: execution.id, reason: clusterCancelReason(reason) });
+  await approvalService.auditCanceledRequests(canceledRequestIds, user);
+  return { kind: "canceled", abortedActiveRun: Boolean(active), abortSignalled, completedAt };
 }

@@ -29,6 +29,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@ai-orchestrator/a2a-sdk':
+        specifier: workspace:*
+        version: link:../../packages/a2a-sdk
       '@ai-orchestrator/agent-runtime':
         specifier: workspace:*
         version: link:../../packages/agent-runtime
