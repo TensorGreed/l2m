@@ -17,6 +17,9 @@ const BLANK_FIELDS: Readonly<Record<string, Readonly<Record<string, unknown>>>> 
   // The tool's name, description and input are the person's to describe; the catalog's knowledge-base example stays a
   // placeholder. An empty input schema takes no arguments until fields are added.
   mcp_server_trigger: { toolName: "", toolDescription: "", inputSchema: { type: "object", properties: {} } },
+  // The agent's description and the remote card URL are the person's to give.
+  a2a_trigger: { agentDescription: "" },
+  a2a_agent: { cardUrl: "" },
   human_approval: { approvalMessage: "" },
   user_prompt: { text: "" }
 };

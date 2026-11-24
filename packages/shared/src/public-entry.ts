@@ -14,7 +14,8 @@ const KNOWN_AUTH_MODES: Readonly<Record<string, readonly string[]>> = {
   webhook_input: ["none", "bearer_token", "hmac_sha256"],
   form_trigger: ["none", "public", "session"],
   chat_trigger: ["none", "public", "session", "bearer"],
-  mcp_server_trigger: ["none", "public", "bearer"]
+  mcp_server_trigger: ["none", "public", "bearer"],
+  a2a_trigger: ["public", "bearer", "api_key"]
 };
 
 /**
@@ -63,6 +64,11 @@ export function publicEntryMessage(node: EntryNode): string | null {
       return authMode === "bearer"
         ? null
         : "Public MCP tool: anyone who can reach this server can call its REST route without a token. Set Auth Mode to Bearer token, or turn it off.";
+    case "a2a_trigger":
+      // Unset is an API key (this trigger never had an open default).
+      return authMode === "public"
+        ? "Public A2A agent: anyone who can reach this server can send it tasks. Set Auth Mode to API key or Bearer token, or turn it off."
+        : null;
     case "chat_trigger":
       return authMode === "session" || authMode === "bearer"
         ? null

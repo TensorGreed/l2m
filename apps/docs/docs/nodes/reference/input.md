@@ -1,6 +1,6 @@
 ---
 title: "Input nodes: config fields and defaults"
-description: "Reference for the 27 nodes in the L2M Input category, with every config field and default."
+description: "Reference for the 28 nodes in the L2M Input category, with every config field and default."
 ---
 
 <!--
@@ -13,11 +13,52 @@ description: "Reference for the 27 nodes in the L2M Input category, with every c
 
 Workflow entry points: triggers (cron, webhook, manual, form, chat, MCP-server) and static-input helpers.
 
-27 nodes.
+28 nodes.
 
 Fields that take <span v-pre>`{{ }}`</span> templates (prompts, URLs, bodies, values) read the steps connected straight into the node; [Templates and expressions](/runtime/templates-and-expressions) covers reading earlier steps with `results`.
 
 ---
+### `a2a_trigger` — Expose as A2A Agent
+
+Publish this workflow as an Agent2Agent (A2A) agent that other agents can discover and send tasks to. Its Agent Card is served at /a2a/<path>/.well-known/agent-card.json and its A2A endpoint at /a2a/<path>. Each task runs the workflow's production version as a normal run; downstream nodes read the message as {{user_prompt}}.
+
+**Config fields**
+
+| Field | Type | Required | Values |
+|---|---|---|---|
+| `path` | `string` | yes | — |
+| `agentName` | `string` | no | — |
+| `agentDescription` | `string` | no | — |
+| `authMode` | `string` | no | `api_key` \| `bearer` \| `public` |
+| `secretRef` | `object` | no | — |
+| `active` | `boolean` | no | — |
+
+**Outputs**
+
+| Field | What it holds |
+|---|---|
+| `user_prompt` | The text of the message the calling agent sent. |
+| `text` | The same text. |
+| `data` | The message's data parts (one object when there is one). |
+| `files` | References to files the message carried (URLs, names, media types). |
+| `contextId` | The conversation's id (also the run's session id). |
+| `messageId` | The message's id. |
+
+Also has triggered and trigger_type.
+
+**Example config**
+
+```json
+{
+  "path": "research-agent",
+  "agentName": "",
+  "agentDescription": "Answers research questions.",
+  "authMode": "api_key"
+}
+```
+
+---
+
 ### `chat_trigger` — Chat Trigger
 
 Receive chat messages via POST /api/chat/:workflowId. Pairs naturally with agent_orchestrator. authMode: session (signed-in users who can read the workflow), bearer (a stored secret) or public (anyone). A new node starts at session; a node saved without authMode is public.

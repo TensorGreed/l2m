@@ -65,3 +65,4 @@ export * from "./public-entry";
 export * from "./new-node-defaults";
 export * from "./rag-search";
 export * from "./connected-accounts";
+export * from "./a2a";

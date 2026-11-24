@@ -2796,6 +2796,65 @@ const baseNodeDefinitions: NodeDefinition[] = [
     }
   },
   {
+    type: "a2a_trigger",
+    label: "Expose as A2A Agent",
+    category: "Input",
+    effectFreeEntry: true,
+    description:
+      "Publish this workflow as an Agent2Agent (A2A) agent that other agents can discover and send tasks to. Its Agent Card is served at /a2a/<path>/.well-known/agent-card.json and its A2A endpoint at /a2a/<path>. Each task runs the workflow's production version as a normal run; downstream nodes read the message as {{user_prompt}}.",
+    configSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string" },
+        /** The card's name; the workflow's name when unset. */
+        agentName: { type: "string" },
+        /** What the card tells other agents this agent does. */
+        agentDescription: { type: "string" },
+        /** api_key (default): an L2M API key of a user who may run the workflow. bearer: the secret's token. public: no token. */
+        authMode: { type: "string", enum: ["api_key", "bearer", "public"] },
+        secretRef: { type: "object" },
+        active: { type: "boolean" }
+      },
+      required: ["path"]
+    },
+    sampleConfig: {
+      path: "research-agent",
+      agentName: "",
+      agentDescription: "Answers research questions.",
+      authMode: "api_key"
+    }
+  },
+  {
+    type: "a2a_agent",
+    label: "A2A Agent",
+    category: "Agent",
+    description:
+      "Sends a task to a remote Agent2Agent (A2A) agent and outputs its answer. Use it as a step, or attach it to a Supervisor's worker port to let the supervisor delegate to the remote agent like a local worker. The URL goes through the outbound URL checks; a token comes only from a secret.",
+    configSchema: {
+      type: "object",
+      properties: {
+        /** The agent's card URL, or its base URL (the well-known card path is added). */
+        cardUrl: { type: "string" },
+        /** Sent as a bearer token. */
+        secretRef: { type: "object" },
+        /** The message sent; the step's {{user_prompt}} (a supervisor's task) when unset. */
+        messageTemplate: { type: "string" },
+        /** Longest one task may take, in milliseconds (default 120000). */
+        timeoutMs: { type: "number" },
+        /** As a worker: what the supervisor reads about this agent. The card's description is not fetched for it. */
+        toolDescription: { type: "string" },
+        /** As a worker: the workflow's write-tool approval gate skips this agent. Off unless set. */
+        readOnly: { type: "boolean" }
+      },
+      required: ["cardUrl"]
+    },
+    sampleConfig: {
+      cardUrl: "https://agents.example.com/research/.well-known/agent-card.json",
+      messageTemplate: "{{user_prompt}}",
+      timeoutMs: 120000
+    }
+  },
+  {
     type: "kafka_trigger",
     label: "Kafka Trigger",
     category: "Input",
@@ -3507,6 +3566,7 @@ export const LIVE_ENTRY_NODE_TYPES: ReadonlySet<string> = new Set([
   "form_trigger",
   "chat_trigger",
   "mcp_server_trigger",
+  "a2a_trigger",
   "schedule_trigger",
   ...APP_TRIGGER_NODE_TYPES
 ]);
@@ -3528,10 +3588,12 @@ export function liveEntryOffMessage(type: string): string {
         ? "chat"
         : type === "mcp_server_trigger"
           ? "MCP tool"
-          : type === "schedule_trigger"
-            ? "schedule"
-            : APP_TRIGGER_NODE_TYPES.has(type)
-              ? "trigger"
-              : "webhook";
+          : type === "a2a_trigger"
+            ? "A2A agent"
+            : type === "schedule_trigger"
+              ? "schedule"
+              : APP_TRIGGER_NODE_TYPES.has(type)
+                ? "trigger"
+                : "webhook";
   return `This ${what} is turned off. Turn it on in the workflow editor to accept live calls.`;
 }
