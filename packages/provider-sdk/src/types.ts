@@ -101,6 +101,12 @@ export interface ProviderCallOptions {
    * used that name. Other providers keep `max_tokens`: OpenAI-compatible servers do not all know the new name.
    */
   maxCompletionTokens?: boolean;
+  /**
+   * The built-in Echo test model only: the tools its one demo call may use, which the agent loop sets to the tools L2M
+   * classifies read-only (admin-marked, built-in, read-only workflow tools). Unset or empty: Echo calls no tool. Other
+   * adapters ignore it.
+   */
+  demoReadOnlyTools?: readonly string[];
 }
 
 export type LLMStreamChunk =

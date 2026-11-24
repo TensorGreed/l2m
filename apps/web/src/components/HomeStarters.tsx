@@ -8,8 +8,12 @@ import { fetchTemplates, useTemplate as createFromTemplate, type TemplateListIte
 /** How many starters the row shows; the rest are one click away in Templates. */
 const SHOWN = 4;
 
-/** The starters shown first: each runs with one click on Run and shows a result straight away. */
-const FIRST = ["builtin-starter-csv-to-json", "builtin-starter-loop-collect", "builtin-starter-retry-fallback", "builtin-starter-approval"];
+/**
+ * The starters shown first: each runs with one click on Run and shows a result straight away. The agent comes first:
+ * it shows an agent's tool call on the built-in Echo test model, with no key.
+ */
+export const FIRST_STARTERS = ["builtin-starter-agent-tool-call", "builtin-starter-csv-to-json", "builtin-starter-loop-collect", "builtin-starter-approval"];
+const FIRST = FIRST_STARTERS;
 
 const rank = (id: string) => (FIRST.includes(id) ? FIRST.indexOf(id) : FIRST.length);
 

@@ -29,6 +29,18 @@ function fillInput(input: HTMLInputElement | HTMLTextAreaElement, value: string)
   input.focus();
 }
 
+/**
+ * When Run asked for the workflow's input first (the Run input popover), types the recorded question there, so the
+ * visitor sees what is asked, and runs it.
+ */
+function answerRunInput(doc: Document, text: string | null): void {
+  const field = doc.querySelector<HTMLTextAreaElement>('textarea[data-testid="run-input-prompt"]');
+  const run = doc.querySelector<HTMLButtonElement>('button[data-testid="run-input-run"]');
+  if (!field || !run || !text) return;
+  fillInput(field, text);
+  run.click();
+}
+
 function runButton(doc: Document): HTMLButtonElement | null {
   return doc.querySelector<HTMLButtonElement>('button[aria-label="Run workflow"]');
 }
@@ -46,9 +58,9 @@ export function recordedRunUrl(workflowId: string, base: string = import.meta.en
 /**
  * "Try the recorded question". In Chat on that workflow it goes into the
  * message box for the visitor to send, so what they see asked is what gets
- * answered. In the editor on that workflow, which has no prompt field, the
- * next run is the recorded question (it shows as the trigger's input on the
- * canvas) and Run is pressed. With another workflow open it opens this one
+ * answered. In the editor on that workflow, the next run is the recorded
+ * question: Run is pressed and, when Run asks for the input first, the
+ * question is typed into its Run input. With another workflow open it opens this one
  * and runs it there, rather than arming a run the open workflow would take.
  */
 export function tryRecordedQuestion(
@@ -70,6 +82,7 @@ export function tryRecordedQuestion(
   const run = runButton(doc);
   if (!run || run.disabled || backend.armRecordedInput(workflowId) === null) return "unavailable";
   run.click();
+  answerRunInput(doc, recordedInput);
   return "ran";
 }
 
@@ -92,8 +105,9 @@ export function runRecordedFromUrl(backend: RecordedInputRunner, win: Window = w
     const run = runButton(win.document);
     // Wait until the editor has opened this workflow, not just drawn its Run button.
     if (run && !run.disabled && openWorkflowId(win.document) === workflowId) {
-      backend.armRecordedInput(workflowId);
+      const recorded = backend.armRecordedInput(workflowId);
       run.click();
+      answerRunInput(win.document, recorded);
       return;
     }
     if (Date.now() - started < timeoutMs) timer = setTimeout(attempt, 200);

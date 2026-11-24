@@ -224,7 +224,7 @@ describe("MCP server prompts: the arguments are judged against the server before
     const harness = guard(REDACT);
     const seen: Array<Record<string, string>> = [];
     const result = await executeWorkflow(
-      { workflow: llmFlow(`card ${CARD}`), executionId: "n2-redact", webhookPayload: {} },
+      { workflow: llmFlow(`card ${CARD}`), executionId: "n2-redact", webhookPayload: { message: "Explain it" } },
       deps({ guard: harness.guard, adapter: promptAdapter(seen), provider: new RecordingProvider() })
     );
     expect(seen).toHaveLength(1);

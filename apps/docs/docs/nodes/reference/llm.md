@@ -35,6 +35,7 @@ Calls a corporate AI gateway using OpenAI-compatible, OpenAI, or Anthropic proto
 | `enableThinking` | `boolean` | no | — |
 | `thinkingTokens` | `number` | no | — |
 | `promptKey` | `string` | no | — |
+| `promptTemplate` | `string` | no | — |
 | `systemPromptKey` | `string` | no | — |
 
 **Outputs**
@@ -59,6 +60,7 @@ Calls a corporate AI gateway using OpenAI-compatible, OpenAI, or Anthropic proto
   "enableThinking": false,
   "thinkingTokens": 1024,
   "promptKey": "prompt",
+  "promptTemplate": "",
   "systemPromptKey": "system_prompt"
 }
 ```
@@ -114,6 +116,7 @@ Calls Anthropic Claude models with an API key or ANTHROPIC_API_KEY.
 | `temperature` | `number` | no | — |
 | `maxTokens` | `number` | no | — |
 | `promptKey` | `string` | no | — |
+| `promptTemplate` | `string` | no | — |
 | `systemPromptKey` | `string` | no | — |
 
 **Outputs**
@@ -133,6 +136,7 @@ Calls Anthropic Claude models with an API key or ANTHROPIC_API_KEY.
   "model": "claude-sonnet-5-5",
   "maxTokens": 1024,
   "promptKey": "prompt",
+  "promptTemplate": "",
   "systemPromptKey": "system_prompt"
 }
 ```
@@ -154,6 +158,7 @@ Calls Azure OpenAI chat/completions using deployment + API version.
 | `temperature` | `number` | no | — |
 | `maxTokens` | `number` | no | — |
 | `promptKey` | `string` | no | — |
+| `promptTemplate` | `string` | no | — |
 | `systemPromptKey` | `string` | no | — |
 
 **Outputs**
@@ -176,6 +181,7 @@ Calls Azure OpenAI chat/completions using deployment + API version.
   "temperature": 0.2,
   "maxTokens": 1024,
   "promptKey": "prompt",
+  "promptTemplate": "",
   "systemPromptKey": "system_prompt"
 }
 ```
@@ -191,6 +197,7 @@ Simple prompt-to-response chain with configurable system and user prompt templat
 | Field | Type | Required | Values |
 |---|---|---|---|
 | `promptKey` | `string` | no | — |
+| `promptTemplate` | `string` | no | — |
 | `systemPromptKey` | `string` | no | — |
 | `outputFormat` | `string` | no | `text` \| `json` |
 
@@ -209,6 +216,7 @@ Simple prompt-to-response chain with configurable system and user prompt templat
 ```json
 {
   "promptKey": "prompt",
+  "promptTemplate": "",
   "systemPromptKey": "system_prompt",
   "outputFormat": "text"
 }
@@ -229,6 +237,7 @@ Calls Google Gemini chat completions using an API key.
 | `temperature` | `number` | no | — |
 | `maxTokens` | `number` | no | — |
 | `promptKey` | `string` | no | — |
+| `promptTemplate` | `string` | no | — |
 | `systemPromptKey` | `string` | no | — |
 
 **Outputs**
@@ -249,6 +258,7 @@ Calls Google Gemini chat completions using an API key.
   "temperature": 0.2,
   "maxTokens": 1024,
   "promptKey": "prompt",
+  "promptTemplate": "",
   "systemPromptKey": "system_prompt"
 }
 ```
@@ -298,6 +308,7 @@ Executes a model completion call.
 |---|---|---|---|
 | `provider` | `object` | yes | — |
 | `promptKey` | `string` | no | — |
+| `promptTemplate` | `string` | no | — |
 | `systemPromptKey` | `string` | no | — |
 | `serverPrompt` | `object` | no | — |
 
@@ -320,6 +331,7 @@ Executes a model completion call.
     "model": "echo"
   },
   "promptKey": "prompt",
+  "promptTemplate": "",
   "systemPromptKey": "system_prompt"
 }
 ```
@@ -339,6 +351,7 @@ Calls a local Ollama model through its OpenAI-compatible API.
 | `temperature` | `number` | no | — |
 | `maxTokens` | `number` | no | — |
 | `promptKey` | `string` | no | — |
+| `promptTemplate` | `string` | no | — |
 | `systemPromptKey` | `string` | no | — |
 
 **Outputs**
@@ -360,6 +373,7 @@ Calls a local Ollama model through its OpenAI-compatible API.
   "temperature": 0.2,
   "maxTokens": 1024,
   "promptKey": "prompt",
+  "promptTemplate": "",
   "systemPromptKey": "system_prompt"
 }
 ```
@@ -380,6 +394,7 @@ Calls OpenAI chat models with an API key or OPENAI_API_KEY.
 | `temperature` | `number` | no | — |
 | `maxTokens` | `number` | no | — |
 | `promptKey` | `string` | no | — |
+| `promptTemplate` | `string` | no | — |
 | `systemPromptKey` | `string` | no | — |
 
 **Outputs**
@@ -400,6 +415,7 @@ Calls OpenAI chat models with an API key or OPENAI_API_KEY.
   "temperature": 0.2,
   "maxTokens": 1024,
   "promptKey": "prompt",
+  "promptTemplate": "",
   "systemPromptKey": "system_prompt"
 }
 ```
@@ -420,6 +436,7 @@ Calls any OpenAI-compatible chat API such as OpenRouter, Groq, vLLM, or LM Studi
 | `temperature` | `number` | no | — |
 | `maxTokens` | `number` | no | — |
 | `promptKey` | `string` | no | — |
+| `promptTemplate` | `string` | no | — |
 | `systemPromptKey` | `string` | no | — |
 
 **Outputs**
@@ -441,6 +458,7 @@ Calls any OpenAI-compatible chat API such as OpenRouter, Groq, vLLM, or LM Studi
   "temperature": 0.2,
   "maxTokens": 1024,
   "promptKey": "prompt",
+  "promptTemplate": "",
   "systemPromptKey": "system_prompt"
 }
 ```

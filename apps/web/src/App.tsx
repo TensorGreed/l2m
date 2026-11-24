@@ -220,6 +220,8 @@ import { GraphHistory, movedNodeIds } from "./lib/graph-history";
 import { AUXILIARY_HANDLES, CHAT_MODEL_NODE_TYPES, validateConnection } from "./lib/connection-rules";
 import { agentModelPeers, applyModelToPeers } from "./lib/agent-models";
 import { BreakGlassBanner } from "./components/BreakGlassBanner";
+import { RunInputPopover } from "./components/RunInputPopover";
+import { EMPTY_RUN_INPUT, loadRunInput, runInputPayload, runNeedsPrompt, saveRunInput, type RunInput } from "./lib/run-input";
 import { BreakGlassConfirmCard } from "./components/BreakGlassConfirmCard";
 import { breakGlassLinkFromHash, stripBreakGlassFragment, type BreakGlassLink } from "./lib/break-glass";
 
@@ -1229,8 +1231,28 @@ function StudioApp() {
     startedTo: ""
   });
 
-  const [systemPrompt, setSystemPrompt] = useState("You are a precise tool-using AI assistant.");
-  const [userPrompt, setUserPrompt] = useState("What time is it in America/Toronto? Use tools when needed.");
+  // The Run input: what Run sends as the prompt and system prompt. Empty until someone types one (there is no built-in
+  // sample prompt), shown next to Run, and remembered per workflow in this browser.
+  const [runInput, setRunInputState] = useState<RunInput>(EMPTY_RUN_INPUT);
+  const [runInputOpen, setRunInputOpen] = useState(false);
+  const [runInputAsked, setRunInputAsked] = useState(false);
+  const systemPrompt = runInput.systemPrompt;
+  const userPrompt = runInput.prompt;
+  const runInputWorkflowId = currentWorkflow.id;
+  useEffect(() => {
+    setRunInputState(loadRunInput(runInputWorkflowId));
+    setRunInputOpen(false);
+    setRunInputAsked(false);
+  }, [runInputWorkflowId]);
+  const setRunInput = useCallback(
+    (next: RunInput) => {
+      setRunInputState(next);
+      saveRunInput(runInputWorkflowId, next);
+    },
+    [runInputWorkflowId]
+  );
+  const setSystemPrompt = useCallback((value: string) => setRunInput({ ...runInput, systemPrompt: value }), [runInput, setRunInput]);
+  const setUserPrompt = useCallback((value: string) => setRunInput({ ...runInput, prompt: value }), [runInput, setRunInput]);
   // Each workflow gets its own editor session, so one workflow's agent memory never feeds another's runs.
   const [sessionIdOverrides, setSessionIdOverrides] = useState<Record<string, string>>({});
   const sessionId = sessionIdOverrides[currentWorkflow.id] ?? `editor-${currentWorkflow.id}`;
@@ -1383,9 +1405,13 @@ function StudioApp() {
   }, [editingNode, edges, nodes]);
 
   // The editor's built-in prompts go only to workflows that read them, and not where a prompt node's text supplies one.
-  const editorPrompts = useMemo(() => {
-    return editorRunPrompts(nodes.map((node) => ({ type: node.data.nodeType, config: node.data.config })));
-  }, [nodes]);
+  const promptNodes = useMemo(() => nodes.map((node) => ({ type: node.data.nodeType, config: node.data.config })), [nodes]);
+  const editorPrompts = useMemo(() => editorRunPrompts(promptNodes), [promptNodes]);
+  // The Run input shows (and sends) only for workflows that read the run's prompt; its system prompt is an extra there.
+  const runInputFieldsShown = useMemo(
+    () => ({ prompt: editorPrompts.sendUserPrompt, systemPrompt: editorPrompts.sendUserPrompt && editorPrompts.sendSystemPrompt }),
+    [editorPrompts.sendUserPrompt, editorPrompts.sendSystemPrompt]
+  );
 
   // Every palette entry: the node definitions, the built-in tool presets and the integration catalog's presets.
   const paletteDefinitions = useMemo(
@@ -3807,36 +3833,14 @@ function StudioApp() {
       if (executionResult?.executionId) payload.nodeOutputsExecutionId = executionResult.executionId;
     }
 
-    if (editorPrompts.sendSystemPrompt) {
-      payload.system_prompt = systemPrompt;
-    }
-
-    if (editorPrompts.sendUserPrompt) {
-      payload.user_prompt = userPrompt;
-    }
+    // The Run input, only for the prompts the workflow reads and only when typed (never a built-in sample).
+    Object.assign(payload, runInputPayload(runInput, runInputFieldsShown));
 
     return payload;
-  }, [editorRunOptions, executionResult, editorPrompts.sendSystemPrompt, editorPrompts.sendUserPrompt, recordMcp, sessionId, systemPrompt, userPrompt]);
+  }, [editorRunOptions, executionResult, runInputFieldsShown, recordMcp, sessionId, runInput]);
 
-  const buildWebhookExecutionPayload = useCallback(() => {
-    const payload: {
-      session_id: string;
-      system_prompt?: string;
-      user_prompt?: string;
-    } = {
-      session_id: sessionId
-    };
-
-    if (editorPrompts.sendSystemPrompt) {
-      payload.system_prompt = systemPrompt;
-    }
-
-    if (editorPrompts.sendUserPrompt) {
-      payload.user_prompt = userPrompt;
-    }
-
-    return payload;
-  }, [editorPrompts.sendSystemPrompt, editorPrompts.sendUserPrompt, sessionId, systemPrompt, userPrompt]);
+  // A Webhook run sends its payload and nothing of the editor's Run input, as a real webhook call would.
+  const buildWebhookExecutionPayload = useCallback(() => ({ session_id: sessionId }), [sessionId]);
 
   const createRunTraceHandlers = useCallback(
     (workflowId: string) =>
@@ -5033,7 +5037,8 @@ function StudioApp() {
           config: withDefaultModelProvider(
             definition.type,
             newNodeConfig(definition.type, definition.sampleConfig, {
-              afterLoopBodyNode: Boolean(connectAfter && isDirectLoopBodyNode(connectAfter.node.id, nodes as EditorNode[], edges))
+              afterLoopBodyNode: Boolean(connectAfter && isDirectLoopBodyNode(connectAfter.node.id, nodes as EditorNode[], edges)),
+              ...(attachContext?.sourceHandle ? { attachedAs: attachContext.sourceHandle } : {})
             }),
             pickDefaultModelProvider({ envProviders: envModelProviders, secrets })
           )
@@ -5574,8 +5579,34 @@ function StudioApp() {
             ) : undefined
           }
           onRun={() => {
+            // A workflow that has nothing to work on without a prompt asks for one first.
+            if (!runInput.prompt.trim() && runNeedsPrompt(promptNodes)) {
+              setRunInputAsked(true);
+              setRunInputOpen(true);
+              return;
+            }
             void handleExecute();
           }}
+          runInput={
+            <RunInputPopover
+              value={runInput}
+              onChange={setRunInput}
+              fields={runInputFieldsShown}
+              open={runInputOpen}
+              onOpenChange={(open) => {
+                setRunInputOpen(open);
+                if (!open) setRunInputAsked(false);
+              }}
+              asked={runInputAsked}
+              busy={busy}
+              runDisabledReason={runDisabledReason}
+              onRun={() => {
+                setRunInputOpen(false);
+                setRunInputAsked(false);
+                void handleExecute();
+              }}
+            />
+          }
           onShare={
             currentWorkflowExists
               ? () =>

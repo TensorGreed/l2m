@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import type { TemplateListItem } from "../lib/api";
 import * as api from "../lib/api";
-import { TemplateGallery, modelPillText } from "./TemplateGallery";
+import { TemplateGallery, modelPillText, templateAuthorLabel } from "./TemplateGallery";
 
 vi.mock("../lib/api", async () => {
   const actual = await vi.importActual<typeof import("../lib/api")>("../lib/api");
@@ -31,6 +31,18 @@ function makeTemplate(): TemplateListItem {
 describe("TemplateGallery", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+  });
+
+  it("names built-in templates' author L2M, shows no author when unknown, and no placeholder description", async () => {
+    expect(templateAuthorLabel("ai-orchestrator")).toBe("L2M");
+    expect(templateAuthorLabel("L2M")).toBe("L2M");
+    expect(templateAuthorLabel("")).toBeNull();
+    expect(templateAuthorLabel(undefined)).toBeNull();
+    vi.mocked(api.fetchTemplates).mockResolvedValue({ templates: [{ ...makeTemplate(), author: "ai-orchestrator", description: "" }] });
+    render(<TemplateGallery onWorkflowCreated={vi.fn()} />);
+    expect(await screen.findByText("by L2M")).toBeInTheDocument();
+    expect(screen.queryByText(/ai-orchestrator/)).toBeNull();
+    expect(screen.queryByText(/No description provided/)).toBeNull();
   });
 
   it("shows loading state while templates are being fetched", () => {

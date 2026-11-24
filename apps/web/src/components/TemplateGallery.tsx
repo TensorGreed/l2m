@@ -13,6 +13,13 @@ function keyedProviders(dependencies: readonly TemplateDependency[]): TemplateDe
 }
 
 /** "Needs an OpenAI key", "Needs OpenAI and Cohere keys", or "Needs a model" (a model server, no key). */
+/** The author a card names: built-in templates (stored as "ai-orchestrator" before they were "L2M") are L2M's; none when unknown. */
+export function templateAuthorLabel(author: string | undefined | null): string | null {
+  const value = (author ?? "").trim();
+  if (!value) return null;
+  return value === "ai-orchestrator" ? "L2M" : value;
+}
+
 export function modelPillText(dependencies: readonly TemplateDependency[]): string {
   const keyed = keyedProviders(dependencies).map((dep) => dep.label);
   if (keyed.length === 0) return "Needs a model";
@@ -165,13 +172,11 @@ export function TemplateGallery({ onWorkflowCreated, initialCategory, projectId 
                 </div>
               )}
               <div className="tpl-card-name">{tpl.name}</div>
-              <div className="tpl-card-desc">
-                {tpl.description || "No description provided."}
-              </div>
+              {tpl.description ? <div className="tpl-card-desc">{tpl.description}</div> : null}
               <div className="tpl-card-meta">
                 <span className="tpl-badge">{tpl.category}</span>
                 <span>{tpl.nodeCount} node{tpl.nodeCount !== 1 ? "s" : ""}</span>
-                <span>by {tpl.author || "Unknown"}</span>
+                {templateAuthorLabel(tpl.author) && <span>by {templateAuthorLabel(tpl.author)}</span>}
               </div>
               {tpl.tags.length > 0 && (
                 <div className="tpl-card-tags">

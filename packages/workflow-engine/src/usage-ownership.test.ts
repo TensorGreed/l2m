@@ -78,7 +78,7 @@ function deps(extra: Partial<WorkflowExecutionDependencies> = {}, ...adapters: L
 }
 
 const model = (id: string, providerId = "metered") =>
-  node(id, "llm_call", { provider: { providerId, model: `${providerId}-model` }, userPromptTemplate: "Write a short note about usage.", retry: { enabled: false, maxAttempts: 1, delayMs: 1 } });
+  node(id, "llm_call", { provider: { providerId, model: `${providerId}-model` }, promptTemplate: "Write a short note about usage.", retry: { enabled: false, maxAttempts: 1, delayMs: 1 } });
 
 /** The usage blobs a host counts: each node result's top-level `_telemetry`. */
 function usageBlobs(result: WorkflowExecutionResult): Array<{ nodeId: string; telemetry: unknown }> {

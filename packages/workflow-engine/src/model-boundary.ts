@@ -337,8 +337,11 @@ export function templateBoundaryPieces(templatePieces: readonly TemplatePiece[],
   return out;
 }
 
-/** A model node's prompt part: engine or author text, or a field it read (`path`, as `readData` reads it). */
-export type PromptPart = string | { text: string; path: string };
+/**
+ * A model node's prompt part: engine or author text, or a field it read (`path`, as `readData` reads it). A part from
+ * a template expression that is not a plain path says so (`simplePath: false`), as template pieces do.
+ */
+export type PromptPart = string | { text: string; path: string; simplePath?: boolean };
 
 /** The text a list of prompt parts makes. */
 export function joinPromptParts(parts: readonly PromptPart[]): string {
@@ -352,7 +355,7 @@ export function joinPromptParts(parts: readonly PromptPart[]): string {
  * outside content.
  */
 export function promptPartPieces(parts: readonly PromptPart[], text: string, sources: PieceSources, replaced = false): BoundaryPiece[] {
-  const pieces = parts.flatMap((part) => (typeof part === "string" ? (part.length > 0 ? [{ text: part, untrusted: false }] : []) : readPieces(part.text, part.path, true, sources)));
+  const pieces = parts.flatMap((part) => (typeof part === "string" ? (part.length > 0 ? [{ text: part, untrusted: false }] : []) : readPieces(part.text, part.path, part.simplePath ?? true, sources)));
   if (!replaced && joinPromptParts(parts) === text) return pieces;
   return text.length > 0 ? [{ text, untrusted: replaced || pieces.some((piece) => piece.untrusted) }] : [];
 }

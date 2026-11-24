@@ -20,6 +20,9 @@ import {
 import type { AgentGuardCheck, AgentRuntimeAdapter, AgentRuntimeContext, AgentRuntimeEvent, AgentToolRuntime, InternalToolResult } from "./types";
 import { AgentGuardInterrupt, createToolErrorResult, isAgentGuardInterrupt, stopsAgentRun } from "./types";
 
+/** The built-in Echo test model's provider id. */
+const ECHO_PROVIDER_ID = "echo";
+
 /**
  * Hands a tool call's arguments or result to its span when the span captures content (off by default). The span's
  * implementation drops it for sensitive work and masks it before export; it never fails the call.
@@ -898,6 +901,10 @@ export class DefaultAgentRuntime implements AgentRuntimeAdapter {
     seen?: { labels?: () => DataLabels }
   ): Promise<AgentRunState> {
     const providerAdapter = context.providerRegistry.get(request.provider.providerId);
+    // The built-in Echo test model may make one demo tool call, and only to a tool L2M classifies read-only.
+    const isEchoProvider = String(request.provider.providerId) === ECHO_PROVIDER_ID;
+    const echoDemoTools = new Set(tools.readOnlyToolNames ?? []);
+    let echoDemoCallMade = false;
     const memoryEnabled = Boolean(context.memoryStore && request.sessionId);
     const memoryNamespace = request.memory?.namespace?.trim() || "default";
     const memoryMaxMessages = normalizeMaxMessages(request.memory?.maxMessages);
@@ -1340,7 +1347,9 @@ ${effectiveSystemPrompt}`;
               {
                 provider: request.provider,
                 messages,
-                tools: request.toolCallingEnabled ? activeTools : []
+                tools: request.toolCallingEnabled ? activeTools : [],
+                // Only the Echo test model reads these: the tools its demo call may use (never a write tool).
+                ...(isEchoProvider ? { options: { demoReadOnlyTools: [...echoDemoTools] } } : {})
               },
               {
                 resolveSecret: context.resolveSecret,
@@ -1430,6 +1439,13 @@ ${effectiveSystemPrompt}`;
           }
           // No prior success — re-throw
           throw llmError ?? new Error("LLM call failed after retries");
+        }
+
+        // The Echo test model: at most one demo tool call per run, and only to a tool L2M classifies read-only.
+        if (isEchoProvider && modelResponse.toolCalls.length > 0) {
+          const allowed = echoDemoCallMade ? [] : modelResponse.toolCalls.filter((call) => echoDemoTools.has(call.name)).slice(0, 1);
+          if (allowed.length > 0) echoDemoCallMade = true;
+          modelResponse = { ...modelResponse, toolCalls: allowed };
         }
 
         // --- Empty/garbage response handling ---

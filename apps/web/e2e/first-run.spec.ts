@@ -153,7 +153,7 @@ test.describe("Home and the gallery for a new user", () => {
       await page.goto("/?mode=dashboard");
       await page.getByTestId("home-starters").getByRole("button", { name: /^All \d+ starters$/ }).click();
       await expect(page.getByRole("button", { name: "Starters", exact: true })).toHaveAttribute("aria-pressed", "true");
-      await expect(page.locator(".tpl-card")).toHaveCount(10);
+      await expect(page.locator(".tpl-card")).toHaveCount(11);
       expect(ollama).toEqual([]);
     } finally {
       await removeNew(page, before);

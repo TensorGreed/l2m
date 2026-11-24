@@ -37,6 +37,13 @@ export interface AgentToolRuntime {
    * `function` for one that runs in process (a worker, a workflow tool, a built-in tool). Absent: `function`.
    */
   toolType?: (toolName: string) => ToolCallSpanInfo["toolType"] | undefined;
+  /**
+   * The tools L2M itself classifies read-only: an admin marked them read-only, they are built-in tools, or they are
+   * workflow tools whose own trigger declares them read-only (a server's own `readOnlyHint` does not count). The
+   * built-in Echo test model may make its one demo tool call only to one of these; the loop drops any other call
+   * Echo asks for. Other providers are not affected.
+   */
+  readOnlyToolNames?: readonly string[];
 }
 
 /** Phase 12.4 — what `checkToolCall` decided. */

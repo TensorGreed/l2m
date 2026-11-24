@@ -160,9 +160,9 @@ again (unless a used-up budget refused that error run, or the queue failed to ta
 
 ## Running from the editor
 
-**Run workflow** runs the saved workflow. The editor has a built-in test prompt, "What time is it in America/Toronto?
-Use tools when needed.", with the system prompt "You are a precise tool-using AI assistant.", and sends each one as the
-run's `user_prompt` and `system_prompt` only when the workflow can read it:
+**Run workflow** runs the saved workflow. **Input**, next to Run, holds what the run sends as its `user_prompt` (and,
+optionally, its `system_prompt`). It starts empty: there is no built-in test prompt, and nothing is sent while it is
+empty. It is remembered for each workflow in your browser. It shows only when the workflow can read a prompt:
 
 - a model, chain, Azure OpenAI Embeddings, Agent or Supervisor node, which falls back to the run's prompts;
 - a Text Input, User Prompt or Chat Trigger node (`user_prompt`), or a System Prompt node with no text
@@ -172,13 +172,18 @@ run's `user_prompt` and `system_prompt` only when the workflow can read it:
 - any node setting that names `user_prompt` or `system_prompt`, such as a `{{user_prompt}}` template or an input
   mapping that reads one.
 
-A Text Input or User Prompt node with text keeps the test prompt out, so the node's text is used, and a System
-Prompt node with text does the same for the system prompt. A workflow that reads neither, for example an HTTP
-Request followed by an Output, runs with no prompt, so the test prompt does not show up in its input or its output.
+A Text Input or User Prompt node with text keeps the Input out, so the node's text is used, and a System Prompt node
+with text does the same for the system prompt. When a workflow has nothing to work on without a prompt (an agent on
+`{{user_prompt}}` behind a Manual Trigger, say) and Input is empty, Run opens Input first.
+
+An LLM Call (or chat model node, or Basic LLM Chain) sends its **Prompt** field, rendered against its input. With the
+Prompt empty it sends the input's `prompt`, `user_prompt`, `message`, `text` or `question`, else what its one parent
+sent (a webhook's body, as JSON). When all of these are empty the node fails and says what to fix; it never sends the
+model an empty message.
 The chat panel sends the message you type, and its system prompt on the same rule.
 
 **Webhook run** (canvas toolbar) asks for the request body first: a JSON object that the run receives as a call to the
-webhook URL would send it, so nodes read its fields as <span v-pre>`{{webhook.customer}}`</span>. The body is saved with the workflow
+webhook URL would send it (Input is not sent), so nodes read its fields as <span v-pre>`{{webhook.customer}}`</span>. The body is saved with the workflow
 (`settings.testWebhookPayload`, at most 64 KB) and filled in the next time. Everyone who can read the workflow sees it,
 so a field named like a credential (`password`, `token`, `api_key`, `authorization`, `secret` and the like) is refused:
 put credentials in a secret instead.

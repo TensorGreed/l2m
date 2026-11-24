@@ -117,10 +117,10 @@ function expectNoFailedNode(result: RunResult) {
 }
 
 describe("starter templates", () => {
-  it("ships ten starters, seeded in the Starters category with their base URL filled in", async () => {
-    expect(starterFiles).toHaveLength(10);
+  it("ships eleven starters, seeded in the Starters category with their base URL filled in", async () => {
+    expect(starterFiles).toHaveLength(11);
     const templates = await starterTemplates();
-    expect(templates).toHaveLength(10);
+    expect(templates).toHaveLength(11);
     for (const template of templates) {
       const full = (await call("GET", `/api/templates/${template.id}`)).json<{ workflowJson: string }>();
       expect(full.workflowJson).not.toContain(STARTER_API_BASE_TOKEN);
@@ -276,6 +276,33 @@ describe("starter templates", () => {
     expect(result.status).toBe("success");
     expectNoFailedNode(result);
     expect(String(outputOf(result, "search").context)).toMatch(/^\[1\] Refunds:/);
+  });
+
+  it("Agent that calls a tool: the Echo test model makes one demo call to the read-only orders tool, with no key", async () => {
+    const { workflow, companions } = await useStarter("Agent that calls a tool");
+    expect(companions).toHaveLength(1);
+    const tool = workflow.nodes.find((node) => node.type === "workflow_tool")!;
+    expect(tool.config.workflowId).toBe(companions[0]!.workflowId);
+    const result = await run(workflow);
+    expect(result.status).toBe("success");
+    expectNoFailedNode(result);
+    const agent = outputOf(result, "agent") as { answer?: string; steps?: Array<{ requestedTools: Array<{ name: string; arguments: unknown }> }> };
+    const calls = (agent.steps ?? []).flatMap((step) => step.requestedTools);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.name).toMatch(/list_orders$/);
+    expect(calls[0]!.arguments).toEqual({});
+    expect(agent.answer).toContain("Demo tool call: Echo called");
+    expect(agent.answer).toContain("Grace Hopper");
+    expect(agent.answer).toContain("Echo is a test model");
+  });
+
+  it("every built-in template has a description and names L2M as its author", async () => {
+    const all = (await call("GET", "/api/templates")).json<{ templates: Array<TemplateRow & { description: string; author: string }> }>().templates;
+    expect(all.length).toBeGreaterThan(20);
+    for (const template of all) {
+      expect(template.description.trim().length, template.name).toBeGreaterThan(20);
+      expect(template.author, template.name).toBe("L2M");
+    }
   });
 
   it("Call an MCP tool calls the sample server's calculator", async () => {

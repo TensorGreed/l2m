@@ -58,7 +58,7 @@ function workflow(id: string, nodes: Workflow["nodes"], edges: Array<[string, st
   } as Workflow;
 }
 
-const echoModel = (id: string) => testNode(id, "llm_call", { provider: { providerId: "echo", model: "echo-1" }, userPromptTemplate: "Summarise the order history of a customer" });
+const echoModel = (id: string) => testNode(id, "llm_call", { provider: { providerId: "echo", model: "echo-1" }, promptTemplate: "Summarise the order history of a customer" });
 
 describe("a model call before a pass-through node", { timeout: 20_000 }, () => {
   it("is counted once after an Approval Gate's approval resumes the run, and once before an If node", async () => {

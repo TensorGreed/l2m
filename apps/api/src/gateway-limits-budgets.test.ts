@@ -160,7 +160,7 @@ function modelTool(id: string, projectId = "default"): Workflow {
         position: { x: 0, y: 0 },
         config: { path: `${id}-path`, toolName: "ask", inputSchema: { type: "object", properties: { text: { type: "string" } } }, authMode: "public" }
       },
-      { id: "model", type: "llm_call", name: "Model", position: { x: 200, y: 0 }, config: { provider: { providerId: "echo", model: "echo-1" }, userPromptTemplate: "Say {{text}}" } },
+      { id: "model", type: "llm_call", name: "Model", position: { x: 200, y: 0 }, config: { provider: { providerId: "echo", model: "echo-1" }, promptTemplate: "Say {{text}}" } },
       { id: "out", type: "output", name: "Out", position: { x: 400, y: 0 }, config: {} }
     ],
     edges: [
@@ -959,7 +959,7 @@ function approvalTool(id: string): Workflow {
         config: { path: `${id}-path`, toolName: "approved_ask", inputSchema: { type: "object", properties: { text: { type: "string" } } }, authMode: "public" }
       },
       { id: "gate", type: "approval_gate", name: "Gate", position: { x: 200, y: 0 }, config: { message: "Go on?", approverRoles: ["admin"], timeoutMinutes: 60 } },
-      { id: "model", type: "llm_call", name: "Model", position: { x: 400, y: 0 }, config: { provider: { providerId: "echo", model: "echo-1" }, userPromptTemplate: "Say {{text}} after the approval" } },
+      { id: "model", type: "llm_call", name: "Model", position: { x: 400, y: 0 }, config: { provider: { providerId: "echo", model: "echo-1" }, promptTemplate: "Say {{text}} after the approval" } },
       { id: "out", type: "output", name: "Out", position: { x: 600, y: 0 }, config: {} }
     ],
     edges: [
@@ -1169,7 +1169,7 @@ describe("review M4 / D12: replays with live calls are budget-checked", () => {
       projectId: "default",
       nodes: [
         { id: "hook", type: "webhook_input", name: "Hook", position: { x: 0, y: 0 }, config: { path: `hook-${id}`, method: "POST" } },
-        { id: "model", type: "llm_call", name: "Model", position: { x: 200, y: 0 }, config: { provider: { providerId: "echo", model: "echo-1" }, userPromptTemplate: "Say hi" } },
+        { id: "model", type: "llm_call", name: "Model", position: { x: 200, y: 0 }, config: { provider: { providerId: "echo", model: "echo-1" }, promptTemplate: "Say hi" } },
         { id: "out", type: "output", name: "Out", position: { x: 400, y: 0 }, config: {} }
       ],
       edges: [

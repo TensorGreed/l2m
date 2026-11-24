@@ -1399,3 +1399,68 @@ body {
   text-align: center;
   overflow-wrap: anywhere;
 }
+
+/* Run input (next to Run): the prompt a Run sends. */
+.run-input-toggle {
+  max-width: 220px;
+}
+
+.run-input-label {
+  font-weight: 600;
+}
+
+.run-input-preview {
+  color: var(--fg-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+}
+
+.run-input-toggle.is-empty .run-input-preview {
+  font-style: italic;
+}
+
+.run-input-popover {
+  width: min(360px, calc(100vw - 32px));
+  padding: 12px;
+  gap: 10px;
+}
+
+.run-input-field {
+  display: grid;
+  gap: 4px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.run-input-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  font-weight: 400;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm, 6px);
+  background: var(--bg);
+  color: var(--fg);
+  resize: vertical;
+}
+
+.run-input-ask {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.run-input-hint {
+  margin: 0;
+  color: var(--fg-muted);
+  font-size: var(--fs-xs);
+  white-space: normal;
+}
+
+.run-input-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

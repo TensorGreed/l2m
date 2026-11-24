@@ -93,15 +93,15 @@ describe("demo fixtures", () => {
     }
   });
 
-  it("record each run with the system prompt the studio sends for it", () => {
-    // The editor and chat defaults in App.tsx; a run must match the one it was recorded with.
-    const defaults = [...studioSource.matchAll(/const \[(?:systemPrompt|chatSystemPrompt), set\w+\] = useState\("([^"]*)"\)/g)].map((match) => match[1]);
-    expect(defaults).toHaveLength(2);
-    expect(new Set(defaults).size).toBe(1);
+  it("record each run with the chat's default system prompt, or none", () => {
+    // The editor's Run sends a system prompt only when someone typed one into its Run input (no built-in default);
+    // Chat sends its own, editable default. A recorded run matches either.
+    expect(studioSource).not.toMatch(/useState\("You are a precise tool-using AI assistant\."\);\n\s*const \[userPrompt/);
+    const chatDefault = /const \[chatSystemPrompt, setChatSystemPrompt\] = useState\("([^"]*)"\)/.exec(studioSource)?.[1];
+    expect(chatDefault).toBeTruthy();
     for (const [workflowId, run] of Object.entries(demoFixtures.runs)) {
-      expect(run.systemPrompt === null || run.systemPrompt === defaults[0], workflowId).toBe(true);
+      expect(run.systemPrompt === null || run.systemPrompt === chatDefault, workflowId).toBe(true);
     }
-    expect(demoFixtures.runs["wf-demo-support-agent"]!.systemPrompt).toBe(defaults[0]);
   });
 
   it("hold no credentials, private hosts or real addresses", () => {

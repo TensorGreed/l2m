@@ -20,7 +20,7 @@ Fields that take <span v-pre>`{{ }}`</span> templates (prompts, URLs, bodies, va
 ---
 ### `mcp_tool` — MCP Tool
 
-Directly invokes an MCP tool outside the agent loop.
+Uses an MCP server's tools: on an agent's tool port the agent picks which to call; as a step it calls one tool directly.
 
 **Config fields**
 

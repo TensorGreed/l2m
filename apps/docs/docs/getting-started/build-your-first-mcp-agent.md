@@ -81,22 +81,22 @@ The three nodes hanging off the agent are **attachment ports**, not DAG steps �
 
 ## 5. Run it (≈ 30 s)
 
-Click the **Run** button in the top-right of the canvas. In the dialog:
+Click the **Run** button in the top-right of the canvas. The agent works on a prompt, so Run opens its **Input** box first. Type:
 
 ```
-user_prompt: What time is it in UTC, and what is 12 times 7?
+What time is it in UTC, and what is 12 times 7?
 ```
 
-Click **Run**.
+Click **Run** in the box. Input is remembered for this workflow, so the next Run sends it again.
 
 Open the **Execution history** panel (left sidebar). The most recent run shows:
 
 - Manual Trigger → success
 - Chat Model (echo), MCP: get_current_time and MCP: calculator → skipped as steps (they are attachments, not DAG steps), then marked as used by the agent, which loaded the model and the tool definitions
 - Agent → success, after one model call
-- Output → success, with the answer `Echo: What time is it in UTC, and what is 12 times 7?`
+- Output → success, with an answer that starts `Echo: What time is it in UTC, and what is 12 times 7?` and says why Echo called no tool
 
-No tool was called, and that is expected. The bundled `echo` provider is not a real model: it repeats your prompt and never asks for a tool, so the agent's first model call is already its final answer. What this run proves is the wiring: the trigger reaches the agent, the agent loads its model and its MCP tools, and the answer reaches the output.
+No tool was called, and that is expected. The bundled `echo` provider is not a real model: it repeats your prompt and cannot choose tools. With tools attached it makes one demo call, but only to a tool L2M classifies read-only (an admin marked it read-only, a built-in tool, or a read-only workflow tool); the sample server's tools are not marked, so Echo calls none and its answer says why. The **Agent that calls a tool** starter on Home shows that one demo call with no key. What this run proves is the wiring: the trigger reaches the agent, the agent loads its model and its MCP tools, and the answer reaches the output.
 
 To see tool calls without a key, open the [support agent in the live demo](https://lsquarem.com/demo/?mode=editor&workflowId=wf-demo-support-agent&demoRun=recorded){target="_self"}. Its recorded run shows the agent calling a knowledge-base tool and a calculator, one call failing and being retried. To make tool calls on your own machine, swap echo for a real model (next step). [What is an AI agent?](/learn/agents/what-is-an-ai-agent) explains the loop you will then see.
 

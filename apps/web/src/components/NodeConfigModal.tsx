@@ -3206,7 +3206,7 @@ export function NodeInspector({
         />
         {isEcho && (
           <div className="cfg-tip" data-testid="echo-provider-tip">
-            Echo is the built-in demo model: it answers with the prompt it receives, needs no key and calls nothing. Pick a
+            Echo is the built-in demo model: it answers with the prompt it receives and needs no key. On an agent it makes one labelled demo call to a read-only tool, never more. Pick a
             real provider when the workflow is ready.
           </div>
         )}
@@ -4705,9 +4705,28 @@ export function NodeInspector({
     );
   };
 
+  /**
+   * The prompt an LLM node sends. Empty: the input's prompt, message or text, else what its parent sent (a webhook's
+   * body, say). Not shown on a model attached to an agent: there the agent writes the messages.
+   */
+  const renderLlmPromptField = () =>
+    node.data.attachedAs === "chat_model" ? null : (
+      <ExpressionField
+        label="Prompt"
+        value={toStringValue(config.promptTemplate, "")}
+        onChange={(next) => setConfig((current) => ({ ...current, promptTemplate: next }))}
+        rows={3}
+        mode="template"
+        previewContext={expressionPreviewContext}
+        placeholder="Empty: the input's prompt, message or text, else the whole input (a webhook's body, say)"
+        help="What the model is asked. Use {{ }} to put in fields of the input, for example Triage this ticket: {{text}} (a webhook's fields are read by name). When it is empty the node sends what reached it, and fails if that is empty."
+      />
+    );
+
   const renderLlmParameters = () => {
     return (
       <>
+        {renderLlmPromptField()}
         {renderProviderSection({
           setCount: countSet([
             [config.promptKey, "prompt", sampleConfig.promptKey],
@@ -4720,7 +4739,7 @@ export function NodeInspector({
                 label="Prompt Key"
                 value={toStringValue(config.promptKey, "prompt")}
                 onChange={(next) => setConfig((current) => ({ ...current, promptKey: next }))}
-                help="The input field the prompt is read from."
+                help="With no Prompt above: the input field read first (then user_prompt, message, text, question)."
               />
               <TextField
                 label="System Prompt Key"
@@ -4737,6 +4756,7 @@ export function NodeInspector({
 
   const renderBasicLlmChainParameters = () => (
     <>
+      {renderLlmPromptField()}
       {renderProviderSection()}
       <SelectField
         label="Output Format"
