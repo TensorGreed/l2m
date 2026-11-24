@@ -1971,9 +1971,11 @@ ${effectiveSystemPrompt}`;
       if (context.signal?.aborted) {
         throw abortErrorFor(context.signal);
       }
+      const failure = error instanceof Error ? error : new Error("Agent runtime failed");
       const result: AgentRunState = {
-        finalAnswer: error instanceof Error ? error.message : "Agent runtime failed",
+        finalAnswer: failure.message,
         stopReason: "error",
+        failure,
         iterations: steps.length,
         messages,
         steps,

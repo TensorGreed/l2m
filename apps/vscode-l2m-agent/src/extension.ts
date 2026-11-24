@@ -6,6 +6,7 @@ import { getL2MAgentConfig } from "./config";
 import { collectWorkspaceContext } from "./contextCollector";
 import { L2MClient } from "./l2mClient";
 import { parseAssistantResponse } from "./responseParser";
+import { L2MRunError } from "./runFailure";
 import {
   applyMessageToSession,
   cloneSessionAsBranch,
@@ -37,6 +38,30 @@ const MAX_PERSISTED_SESSIONS = 30;
 const MAX_PERSISTED_MESSAGES = 100;
 const MAX_ACTION_RESULTS = 50;
 const CHAT_VIEW_ID = "l2mAgent.chatView";
+const OUTPUT_CHANNEL_NAME = "L2M Agent";
+
+let outputChannel: vscode.OutputChannel | undefined;
+
+function getOutputChannel(): vscode.OutputChannel {
+  outputChannel ??= vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME);
+  return outputChannel;
+}
+
+/** Writes a failed request to the output channel: the short message, then everything L2M returned. */
+function logRequestFailure(error: unknown, workflowLabel: string): void {
+  const channel = getOutputChannel();
+  const message = error instanceof Error ? error.message : String(error);
+  channel.appendLine(`[${new Date().toISOString()}] Request to workflow "${workflowLabel}" failed: ${message}`);
+  if (error instanceof L2MRunError && error.details !== undefined) {
+    let details: string;
+    try {
+      details = typeof error.details === "string" ? error.details : JSON.stringify(error.details, null, 2);
+    } catch {
+      details = String(error.details);
+    }
+    channel.appendLine(details);
+  }
+}
 
 export function activate(context: vscode.ExtensionContext) {
   const sessionStore = new SessionStore(context);
@@ -98,7 +123,8 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate() {
-  // No background resources yet.
+  outputChannel?.dispose();
+  outputChannel = undefined;
 }
 
 class SessionStore {
@@ -642,7 +668,10 @@ class L2MAgentChatWebviewController {
       }
       this.postToWebview({ type: "appendMessage", message: assistantMessage });
     } catch (error) {
-      const text = error instanceof Error ? error.message : "L2M request failed.";
+      logRequestFailure(error, config.workflowId || config.webhookPath);
+      const text = error instanceof L2MRunError
+        ? `${error.message} Details are in the "${OUTPUT_CHANNEL_NAME}" output channel.`
+        : error instanceof Error ? error.message : "L2M request failed.";
       const errorMessage = createChatMessage("assistant", text, { variant: "error" });
       await this.sessionStore.appendMessage(errorMessage);
       this.postToWebview({ type: "appendMessage", message: errorMessage });

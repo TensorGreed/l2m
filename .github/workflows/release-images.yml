@@ -767,11 +767,25 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
+          # Docker Hub can take a few minutes to serve a signature just pushed ("no signatures found"): try up to
+          # VERIFY_TRIES times, VERIFY_WAIT_SECONDS apart, and fail after the last try.
+          VERIFY_TRIES=8
+          VERIFY_WAIT_SECONDS=30
           for name in api web ner; do
             ref=$(cat "dist/l2m-$name.dockerhub.txt")
-            cosign verify "$ref" \
+            try=1
+            until cosign verify "$ref" \
               --certificate-identity-regexp "$RELEASE_IDENTITY_REGEXP" \
-              --certificate-oidc-issuer "$OIDC_ISSUER" > /dev/null
+              --certificate-oidc-issuer "$OIDC_ISSUER" > /dev/null; do
+              if [ "$try" -ge "$VERIFY_TRIES" ]; then
+                echo "::error::cosign verify of $ref failed after $VERIFY_TRIES tries"
+                exit 1
+              fi
+              echo "cosign verify of $ref: try $try of $VERIFY_TRIES failed; trying again in ${VERIFY_WAIT_SECONDS}s"
+              try=$((try + 1))
+              sleep "$VERIFY_WAIT_SECONDS"
+            done
+            echo "cosign verify of $ref: passed on try $try of $VERIFY_TRIES"
             gh attestation verify "oci://$ref" --repo "$GH_REPO" \
               --signer-workflow "$GH_REPO/.github/workflows/release-images.yml" \
               --source-ref "$GITHUB_REF" --deny-self-hosted-runners > /dev/null

@@ -5,6 +5,7 @@ import type {
   L2MStreamHandlers,
   L2MWebhookPayload
 } from "./protocol";
+import { errorBodyFailure, runFailureOf, type RunFailureContext } from "./runFailure";
 
 interface L2MHttpRequest {
   response: Response;
@@ -43,7 +44,11 @@ export class L2MClient {
       const text = await withRequestDeadline(request.response.text(), request, this.config.requestTimeoutMs);
       const parsed = parseJsonSafely(text);
       if (!request.response.ok) {
-        throw new Error(extractErrorMessage(parsed) || `L2M request failed (${request.response.status})`);
+        throw errorBodyFailure(parsed ?? text, this.failureContext(), `L2M request failed (${request.response.status})`);
+      }
+      const failure = runFailureOf(parsed, this.failureContext());
+      if (failure) {
+        throw failure;
       }
       return parsed ?? text;
     } catch (error) {
@@ -62,7 +67,7 @@ export class L2MClient {
       if (!request.response.ok) {
         const text = await withRequestDeadline(request.response.text(), request, this.config.requestTimeoutMs);
         const parsed = parseJsonSafely(text);
-        throw new Error(extractErrorMessage(parsed) || `L2M stream failed (${request.response.status})`);
+        throw errorBodyFailure(parsed ?? text, this.failureContext(), `L2M stream failed (${request.response.status})`);
       }
       if (!request.response.body) {
         throw new Error("L2M stream response did not include a readable body.");
@@ -72,7 +77,7 @@ export class L2MClient {
       const decoder = new TextDecoder();
       let buffer = "";
       let finalResult: unknown = undefined;
-      let streamError = "";
+      let streamError: unknown = undefined;
 
       while (true) {
         const { done, value } = await withRequestDeadline(
@@ -100,7 +105,7 @@ export class L2MClient {
               finalResult = maybeResult ?? event.payload;
             }
             if (event.event === "error") {
-              streamError = extractErrorMessage(event.payload) || "L2M stream returned an error.";
+              streamError = event.payload ?? "L2M stream returned an error.";
             }
           }
 
@@ -119,17 +124,17 @@ export class L2MClient {
         if (finalEvent.event === "result") {
           finalResult = maybeResult ?? finalEvent.payload;
         } else if (finalEvent.event === "error") {
-          streamError = extractErrorMessage(finalEvent.payload) || "L2M stream returned an error.";
+          streamError = finalEvent.payload ?? "L2M stream returned an error.";
         }
       }
 
-      if (streamError) {
-        throw new Error(streamError);
+      // The run's own result describes a failure best (its failed node and the chat model's record).
+      const failure = runFailureOf(finalResult, this.failureContext());
+      if (failure) {
+        throw failure;
       }
-
-      const resultError = extractWorkflowResultError(finalResult);
-      if (resultError) {
-        throw new Error(resultError);
+      if (streamError !== undefined) {
+        throw errorBodyFailure(streamError, this.failureContext(), "L2M stream returned an error.");
       }
 
       return finalResult;
@@ -172,6 +177,10 @@ export class L2MClient {
       }
       throw error;
     }
+  }
+
+  private failureContext(): RunFailureContext {
+    return { workflowLabel: this.config.workflowId || this.config.webhookPath || "selected" };
   }
 
   private buildHeaders(): Record<string, string> {
@@ -245,7 +254,10 @@ function handleKnownEvent(event: L2MSseEvent, handlers: L2MStreamHandlers): unkn
   } else if (event.event === "node_complete") {
     const nodeId = valueAt(payload, "nodeId");
     const status = valueAt(payload, "status");
-    handlers.onProgress?.(`Completed ${nodeId || "node"}${status ? ` (${status})` : ""}.`);
+    const label = nodeId || "node";
+    handlers.onProgress?.(
+      status === "error" ? `${label} failed.` : `Completed ${label}${status && status !== "success" ? ` (${status})` : ""}.`
+    );
   } else if (event.event === "llm_delta") {
     const delta = valueAt(payload, "delta");
     if (typeof delta === "string" && delta) {
@@ -264,35 +276,6 @@ function parseJsonSafely(value: string): unknown {
   } catch {
     return null;
   }
-}
-
-function extractErrorMessage(value: unknown): string {
-  if (typeof value === "string") {
-    return value;
-  }
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return "";
-  }
-
-  const record = value as Record<string, unknown>;
-  return typeof record.error === "string"
-    ? record.error
-    : typeof record.message === "string"
-      ? record.message
-      : "";
-}
-
-function extractWorkflowResultError(value: unknown): string {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return "";
-  }
-
-  const record = value as Record<string, unknown>;
-  if (record.status !== "error") {
-    return "";
-  }
-
-  return extractErrorMessage(record) || "L2M workflow execution failed.";
 }
 
 function valueAt(value: unknown, key: string): unknown {

@@ -1626,6 +1626,12 @@ export interface AgentRunState {
   llmLatencyMs?: number;
   /** How many provider calls were made (iterations + retries that succeeded). */
   llmCallCount?: number;
+  /**
+   * Set when `stopReason === "error"` and the run ended on an error instead of a model answer (a model call that
+   * failed with nothing answered before it, or a throw in the loop): `finalAnswer` then holds only its message. The
+   * workflow engine fails the agent's node with it. In-process only; not serialized.
+   */
+  failure?: Error;
 }
 
 export interface WorkflowExecuteRequest {

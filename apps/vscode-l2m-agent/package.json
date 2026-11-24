@@ -2,7 +2,7 @@
   "name": "vscode-l2m-agent",
   "displayName": "L2M Agent",
   "description": "A coding and data agent in VS Code, backed by workflows on your own self-hosted L2M server.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "publisher": "l2m",
   "license": "MIT",
