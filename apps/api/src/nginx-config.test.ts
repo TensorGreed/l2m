@@ -74,8 +74,11 @@ describe("web image API upstream (L2M_API_UPSTREAM)", () => {
   it("ships api:4000 and proxies every API route through the l2m_api upstream", () => {
     expect(shipped).toMatch(/upstream l2m_api \{\n {2}server api:4000;\n\}/);
     const proxied = [...shipped.matchAll(/proxy_pass\s+([^;]+);/g)].map((match) => match[1]);
-    expect(proxied.length).toBe(6);
+    expect(proxied.length).toBe(7);
     expect(new Set(proxied)).toEqual(new Set(["http://l2m_api"]));
+    for (const route of ["/api/", "/webhook/", "/webhook-test/", "/mcp/", "/v1/", "/a2a/", "/health"]) {
+      expect(shipped).toContain(`location ${route} {`);
+    }
   });
 
   it("leaves the config untouched when unset or empty", () => {

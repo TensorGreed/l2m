@@ -3,8 +3,8 @@
 # Everything it creates runs in, and is billed to, the DigitalOcean account of whoever clicks the button.
 #
 #   web  the studio (ghcr.io/tensorgreed/l2m-web) at the app's https address.
-#   api  the API (ghcr.io/tensorgreed/l2m). The app's router sends /api, /webhook, /webhook-test, /mcp, /v1 and
-#        /health straight to it; everything else goes to the studio.
+#   api  the API (ghcr.io/tensorgreed/l2m). The app's router sends /api, /webhook, /webhook-test, /mcp, /v1, /a2a
+#        and /health straight to it; everything else goes to the studio.
 #   db   a Dev Database (PostgreSQL). App Platform has no persistent disks, so the data lives here.
 #
 # Before you create the app, set two values on the api component (Edit next to its environment variables):
@@ -113,6 +113,12 @@ spec:
       - match:
           path:
             prefix: /v1/
+        component:
+          name: api
+          preserve_path_prefix: true
+      - match:
+          path:
+            prefix: /a2a/
         component:
           name: api
           preserve_path_prefix: true

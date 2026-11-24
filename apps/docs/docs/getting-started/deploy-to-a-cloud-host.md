@@ -67,7 +67,7 @@ database run on paid types, since a free database is deleted after a while.
 - **Render only:** set `APP_PUBLIC_URL` and `WEB_ORIGIN` on `l2m-api` to the studio's address (for example
   `https://l2m-ab12.onrender.com`). Links in approval notifications and connected accounts' sign-in redirects are
   built from it. On DigitalOcean the template sets both to the app's address.
-- Webhook, MCP gateway and `/v1` addresses all start with the studio's public address. See
+- Webhook, MCP gateway, A2A agent and `/v1` addresses all start with the studio's public address. See
   [Environment](./environment.md) for every other setting.
 
 ## Upgrade

@@ -2,7 +2,7 @@
 # Everything it creates runs in, and is billed to, the Render workspace of whoever clicks the button.
 #
 #   l2m      the studio (ghcr.io/tensorgreed/l2m-web), the public https://<name>.onrender.com address. It forwards /api,
-#            /webhook, /webhook-test, /mcp, /v1 and /health to l2m-api over Render's private network.
+#            /webhook, /webhook-test, /mcp, /v1, /a2a and /health to l2m-api over Render's private network.
 #   l2m-api  the API (ghcr.io/tensorgreed/l2m), a private service with no public address.
 #   l2m-db   Render Postgres, reachable only from the private network. Workflows, runs, users and encrypted secrets
 #            live here.

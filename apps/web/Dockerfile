@@ -5,7 +5,7 @@
 # - build stage installs deps + compiles the React/Vite SPA to static files.
 # - runtime stage is nginx:1.31-alpine-slim serving the built dist/ over HTTP,
 #   with the nginx.conf from this folder proxying /api, /webhook, /webhook-test,
-#   /mcp, /v1 and /health to the upstream `api` service on port 4000 (the
+#   /mcp, /v1, /a2a and /health to the upstream `api` service on port 4000 (the
 #   docker-compose.yml service name). L2M_API_UPSTREAM=host:port points it
 #   elsewhere (nginx-api-upstream.sh, run by the nginx image's entrypoint
 #   before nginx starts). The HEALTHCHECK uses BusyBox's built-in wget, so
