@@ -260,6 +260,28 @@ function validateNodeConfig(workflow: Workflow): WorkflowValidationIssue[] {
       }
     }
 
+    if (node.type === "a2a_agent") {
+      if (typeof config.cardUrl !== "string" || !config.cardUrl.trim()) {
+        issues.push({ code: "missing_a2a_card_url", message: "A2A Agent needs the remote agent's card URL.", nodeId: node.id });
+      }
+      if (config.timeoutMs !== undefined && (typeof config.timeoutMs !== "number" || !Number.isFinite(config.timeoutMs) || config.timeoutMs < 1)) {
+        issues.push({ code: "invalid_a2a_timeout_ms", message: "A2A Agent timeoutMs must be a number >= 1.", nodeId: node.id });
+      }
+    }
+
+    if (node.type === "a2a_trigger") {
+      const a2aPath = typeof config.path === "string" ? config.path.trim() : "";
+      if (!a2aPath) {
+        issues.push({ code: "missing_a2a_trigger_path", message: "Expose as A2A Agent needs a path.", nodeId: node.id });
+      } else if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(a2aPath)) {
+        issues.push({
+          code: "invalid_a2a_trigger_path",
+          message: "Expose as A2A Agent path may use letters, digits, '.', '_' and '-' (up to 100, starting with a letter or digit).",
+          nodeId: node.id
+        });
+      }
+    }
+
     if (node.type === "http_request") {
       const method = typeof config.method === "string" ? config.method.trim().toUpperCase() : "";
       if (!allowedHttpRequestMethods.has(method)) {
@@ -1318,11 +1340,12 @@ function validateNodeConfig(workflow: Workflow): WorkflowValidationIssue[] {
     if (
       edge.sourceHandle === "worker" &&
       targetNode.type !== "agent_orchestrator" &&
-      targetNode.type !== "supervisor_node"
+      targetNode.type !== "supervisor_node" &&
+      targetNode.type !== "a2a_agent"
     ) {
       issues.push({
         code: "invalid_worker_attachment",
-        message: "Supervisor worker attachment must target an Agent Orchestrator or Supervisor node.",
+        message: "Supervisor worker attachment must target an Agent Orchestrator, Supervisor or A2A Agent node.",
         edgeId: edge.id
       });
     }
@@ -1564,6 +1587,8 @@ const DRAFT_SAVEABLE_ISSUE_CODES = new Set([
   "missing_llm_provider",
   "missing_if_condition",
   "missing_http_request_url_template",
+  "missing_a2a_card_url",
+  "missing_a2a_trigger_path",
   "invalid_http_retry_on_status",
   "missing_gemini_model",
   "missing_execute_workflow_id",

@@ -361,6 +361,9 @@ importers:
 
   packages/workflow-engine:
     dependencies:
+      '@ai-orchestrator/a2a-sdk':
+        specifier: workspace:*
+        version: link:../a2a-sdk
       '@ai-orchestrator/agent-runtime':
         specifier: workspace:*
         version: link:../agent-runtime

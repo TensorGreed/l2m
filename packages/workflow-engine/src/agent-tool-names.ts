@@ -66,7 +66,7 @@ export function duplicateAgentToolNameIssues(workflow: Pick<Workflow, "nodes" | 
       const config = record(target.config);
       const label = target.name || target.id;
       if (edge.sourceHandle === "worker") {
-        if (target.type === "agent_orchestrator" || target.type === "supervisor_node") add(workerDelegateToolName(target.name), target.id, label);
+        if (target.type === "agent_orchestrator" || target.type === "supervisor_node" || target.type === "a2a_agent") add(workerDelegateToolName(target.name), target.id, label);
         continue;
       }
       if (target.type === "workflow_tool") {

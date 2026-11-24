@@ -80,7 +80,7 @@ export const BUILDER_ATTACHMENT_PORTS: Readonly<Record<string, readonly Attachme
   agent_orchestrator: AGENT_PORTS,
   supervisor_node: [
     ...AGENT_PORTS,
-    { handle: "worker", accepts: ["agent_orchestrator", "supervisor_node"], required: false, multiple: true, description: "agents this supervisor delegates to" }
+    { handle: "worker", accepts: ["agent_orchestrator", "supervisor_node", "a2a_agent"], required: false, multiple: true, description: "agents this supervisor delegates to (local, or remote over A2A)" }
   ],
   guard: [{ handle: "protection", accepts: ["guard_protection"], required: false, multiple: false, description: "a protection provider" }]
 });
@@ -613,6 +613,8 @@ const OPTIONAL_CREDENTIAL_TYPES = new Set([
   "chat_trigger",
   "sse_trigger",
   "mcp_server_trigger",
+  "a2a_trigger",
+  "a2a_agent",
   "guard_protection",
   "guard_reveal",
   "ollama_chat_model"

@@ -4,6 +4,7 @@
  */
 import type { WorkflowNode, WorkflowNodeType } from "@ai-orchestrator/shared";
 import {
+  executeA2aTrigger,
   executeChatTrigger,
   executeFileTrigger,
   executeFormTrigger,
@@ -25,6 +26,7 @@ export const PHASE35_TRIGGER_NODE_TYPES: ReadonlySet<WorkflowNodeType> = new Set
   "rss_trigger",
   "sse_trigger",
   "mcp_server_trigger",
+  "a2a_trigger",
   "kafka_trigger",
   "rabbitmq_trigger",
   "mqtt_trigger"
@@ -54,6 +56,8 @@ export function executePhase35TriggerNode(
       return executeSseTrigger(config, ctx);
     case "mcp_server_trigger":
       return executeMcpServerTrigger(config, ctx);
+    case "a2a_trigger":
+      return executeA2aTrigger(config, ctx);
     case "kafka_trigger":
       return executeKafkaTrigger(config, ctx);
     case "rabbitmq_trigger":

@@ -206,10 +206,10 @@ export interface PieceSources {
  * forms and MCP server calls. Runs started by email, feeds, files, chat apps,
  * queues, other workflows and the rest carry third-party content.
  */
-const CALLER_INPUT_TRIGGERS = new Set(["webhook", "webhook_test", "webhook_api", "webhook_api_stream", "api_queue", "chat", "form", "mcp_server"]);
+const CALLER_INPUT_TRIGGERS = new Set(["webhook", "webhook_test", "webhook_api", "webhook_api_stream", "api_queue", "chat", "form", "mcp_server", "a2a"]);
 
 /** Nodes that hand on the run's input as the caller sent it. Content triggers (email, feeds, files, chat apps, queues, sub-workflows) are not here. */
-const CALLER_INPUT_NODES = new Set(["webhook_input", "chat_trigger", "form_trigger", "mcp_server_trigger", "manual_trigger", "text_input", "user_prompt", "system_prompt"]);
+const CALLER_INPUT_NODES = new Set(["webhook_input", "chat_trigger", "form_trigger", "mcp_server_trigger", "a2a_trigger", "manual_trigger", "text_input", "user_prompt", "system_prompt"]);
 
 /** Nodes that only reshape what they read: their output is the caller's input when everything they read is. */
 const PASS_THROUGH_NODES = new Set([

@@ -64,13 +64,19 @@ describe("runPromptReads matches the engine", () => {
       .filter((handler) => READS_USER.test(handler.body))
       .flatMap((handler) => handler.types)
       .filter((type) => !WHOLE_INPUT_FALLBACKS.has(type));
-    // The Phase 3.5 trigger group reads it only for the chat trigger (connectors/triggers.ts executeChatTrigger).
+    // The Phase 3.5 trigger group reads it only for the chat and A2A triggers (connectors/triggers.ts executeChatTrigger,
+    // executeA2aTrigger).
     const triggerGroup = handlers.find((handler) => handler.types.includes("chat_trigger"))!.types;
-    const missing = readers.filter((type) => !triggerGroup.includes(type) || type === "chat_trigger").filter((type) => !runPromptReads([{ type, config: {} }]).userPrompt);
+    const promptTriggers = new Set(["chat_trigger", "a2a_trigger"]);
+    const missing = readers.filter((type) => !triggerGroup.includes(type) || promptTriggers.has(type)).filter((type) => !runPromptReads([{ type, config: {} }]).userPrompt);
     expect(missing).toEqual([]);
-    const chatOnly = readFileSync(new URL("./connectors/triggers.ts", import.meta.url), "utf8");
-    expect(chatOnly.match(/ctx\.globals\.user_prompt/g)?.length).toBe(2);
-    expect(chatOnly.slice(chatOnly.indexOf("export function executeChatTrigger"))).toContain("ctx.globals.user_prompt");
+    for (const type of promptTriggers) expect(runPromptReads([{ type, config: {} }]).userPrompt).toBe(true);
+    const triggerSource = readFileSync(new URL("./connectors/triggers.ts", import.meta.url), "utf8");
+    expect(triggerSource.match(/ctx\.globals\.user_prompt/g)?.length).toBe(4);
+    const chat = triggerSource.slice(triggerSource.indexOf("export function executeChatTrigger"));
+    expect(chat.slice(0, chat.indexOf("\n}\n"))).toContain("ctx.globals.user_prompt");
+    const a2a = triggerSource.slice(triggerSource.indexOf("export function executeA2aTrigger"));
+    expect(a2a.slice(0, a2a.indexOf("\n}\n"))).toContain("ctx.globals.user_prompt");
   });
 
   it("lists every handler that reads the run's system prompt by itself", () => {

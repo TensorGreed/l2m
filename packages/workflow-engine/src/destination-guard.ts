@@ -35,6 +35,7 @@ import {
 } from "@ai-orchestrator/shared";
 import { profileChecksOutbound, profileHasDestinationRules, type GuardChannel } from "@ai-orchestrator/guard-sdk";
 import { ApprovalHandoffSignal } from "./approval-handoff";
+import { readA2aAgentSettings } from "./a2a-agent";
 import {
   declassifiedClasses,
   describeGuardVerdict,
@@ -162,6 +163,8 @@ export type EgressOverride =
   | { kind: "browse"; url: string }
   /** RAG senders: the rendered query (the documents come from upstream data, never rendered). */
   | { kind: "rag"; query: string }
+  /** A2A Agent: the message sent to the remote agent. */
+  | { kind: "a2a"; message: string }
   /** Nothing is rendered by the handler: what it sends is its settings as they are. */
   | { kind: "none" };
 
@@ -180,7 +183,7 @@ export interface EgressRequest {
 }
 
 /** Node types that send requests the egress checkpoint sees, besides category `Connector` senders. */
-const HTTP_EGRESS_TYPES = new Set(["http_request", "web_browse"]);
+const HTTP_EGRESS_TYPES = new Set(["http_request", "web_browse", "a2a_agent"]);
 /** RAG nodes whose embedder, vector store or reranker can be a network service. */
 const RAG_EGRESS_TYPES = new Set(["rag_retrieve", "embeddings_azure_openai", "rerank"]);
 /** Connector nodes that hand their settings to a connector adapter as they are (no rendering). */
@@ -419,6 +422,27 @@ export function describeEgressRequest(
         if (query !== undefined) url.search = query;
         const nextHeaders = Object.fromEntries(Object.entries(record(value.headers)).map(([key, item]) => [key, String(item)]));
         return { kind: "http", url: url.toString(), headers: nextHeaders, body: readable !== body ? body : value.body };
+      }
+    });
+  }
+  if (node.type === "a2a_agent") {
+    const settings = readA2aAgentSettings(config);
+    if (!settings.cardUrl) return null;
+    const message = renderTemplate(settings.messageTemplate, templateData);
+    const parts = urlContent(settings.cardUrl);
+    const ref = networkDestinationRef("http", undefined, parts.host);
+    return finish({
+      refs: [ref],
+      channel: "egress",
+      content: { url: parts.url, message },
+      what: `${label} (A2A task to ${ref.host || "an unknown agent"})`,
+      approvalTag: ref.host ?? "",
+      sent: { kind: "a2a", message },
+      apply(rewritten) {
+        const value = record(rewritten);
+        // Only the message may change: the agent it goes to stays.
+        if (typeof value.message !== "string" || value.url !== parts.url) return null;
+        return { kind: "a2a", message: value.message };
       }
     });
   }
