@@ -47,6 +47,8 @@ Docker (amd64/arm64), Helm, SQLite or Postgres. Nothing is hosted by us, and L2M
 - **CI for agents.** Record a run, change the prompt or model, replay, and block the release if the
   behaviour changes.
 
+[![TensorGreed/l2m MCP server](https://glama.ai/mcp/servers/TensorGreed/l2m/badges/score.svg)](https://glama.ai/mcp/servers/TensorGreed/l2m)
+
 ## What's inside
 
 Visual builder with ~140 node types · describe-a-workflow builder · import workflow exports from other
