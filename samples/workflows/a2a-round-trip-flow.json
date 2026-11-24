@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "1.0.0",
+  "workflowVersion": 1,
+  "workflow": {
+    "id": "wf-a2a-round-trip",
+    "name": "A2A agent round trip",
+    "description": "A2A in both directions, with no model keys. The Expose as A2A Agent trigger serves this workflow as an Agent2Agent agent (Agent Card at /a2a/a2a-round-trip/.well-known/agent-card.json, callers send an L2M API key). Each task it receives is passed to an A2A Agent node, which calls the built-in mock-a2a://echo test agent, and the echo comes back as the task's answer. Point the A2A Agent node at a real agent's card URL to delegate for real.",
+    "schemaVersion": "1.0.0",
+    "workflowVersion": 1,
+    "nodes": [
+      {
+        "id": "a2a_trigger_1",
+        "type": "a2a_trigger",
+        "name": "Expose as A2A Agent",
+        "position": { "x": 80, "y": 200 },
+        "config": {
+          "path": "a2a-round-trip",
+          "agentName": "Round trip agent",
+          "agentDescription": "Passes each message to another A2A agent and answers with its reply.",
+          "authMode": "api_key"
+        }
+      },
+      {
+        "id": "a2a_agent_1",
+        "type": "a2a_agent",
+        "name": "Echo agent (A2A)",
+        "position": { "x": 380, "y": 200 },
+        "config": {
+          "cardUrl": "mock-a2a://echo",
+          "messageTemplate": "{{user_prompt}}",
+          "timeoutMs": 30000
+        }
+      },
+      {
+        "id": "output_1",
+        "type": "output",
+        "name": "Answer",
+        "position": { "x": 680, "y": 200 },
+        "config": {
+          "responseTemplate": "{{text}}",
+          "outputKey": "result"
+        }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "a2a_trigger_1", "target": "a2a_agent_1" },
+      { "id": "e2", "source": "a2a_agent_1", "target": "output_1" }
+    ]
+  }
+}

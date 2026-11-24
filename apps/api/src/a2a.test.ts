@@ -1,7 +1,10 @@
 /**
  * A2A — a workflow served as an Agent2Agent agent (a2a-routes.ts), and L2M calling L2M over A2A.
  */
+import fs from "node:fs";
 import type { AddressInfo } from "node:net";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import type { Workflow, WorkflowNode } from "@ai-orchestrator/shared";
 import { SecretService } from "./services/secret-service.js";
@@ -273,6 +276,17 @@ describe("L2M calling L2M over A2A", () => {
     expect(response.json()).toMatchObject({ output: { result: "Peer said: Served: who are you? (completed)" } });
     const runs = (await ctx.store.listExecutionHistory({ page: 1, pageSize: 10 })).items;
     expect(runs.map((run) => run.triggerType).sort()).toEqual(["a2a", "webhook"]);
+  });
+
+  it("the A2A round trip sample answers a task through the mock echo agent, with no model keys", async () => {
+    const ctx = await context();
+    const file = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../samples/workflows/a2a-round-trip-flow.json");
+    const sample = (JSON.parse(fs.readFileSync(file, "utf8")) as { workflow: Workflow }).workflow;
+    await ctx.store.upsertWorkflow({ ...sample, projectId: "default" });
+    const builder = await loginAs(ctx, "builder");
+    const key = (await callAs(ctx, "POST", "/api/auth/api-keys", builder.cookie, { name: "sample" })).json<{ key: string }>().key;
+    const response = await rpc(ctx, "a2a-round-trip", send("ping"), { authorization: `Bearer ${key}` });
+    expect(response.json(), response.body).toMatchObject({ result: { task: { status: { state: "TASK_STATE_COMPLETED" }, artifacts: [{ parts: [{ text: "Echo: ping" }, {}] }] } } });
   });
 
   it("the editor previews a remote card through the outbound guard (builders only)", async () => {
