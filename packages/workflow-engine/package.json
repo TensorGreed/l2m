@@ -10,6 +10,7 @@
     "gen:import-coverage": "tsx scripts/export-import-coverage.ts"
   },
   "dependencies": {
+    "@ai-orchestrator/a2a-sdk": "workspace:*",
     "@ai-orchestrator/agent-runtime": "workspace:*",
     "@ai-orchestrator/connector-sdk": "workspace:*",
     "@ai-orchestrator/guard-sdk": "workspace:*",

@@ -196,6 +196,8 @@ import { executeTier1Node, TIER1_NODE_TYPES } from "./connectors/tier1-dispatch"
 import { dropClientCredentialsToken, getClientCredentialsToken, sendWithCredentialRefresh, withCredentialRefresh, type ClientCredentialsRequest, type RefreshRejectedCredential } from "./http-auth";
 import { executeTier2Node, TIER2_NODE_TYPES } from "./connectors/tier2-dispatch";
 import { executePhase35TriggerNode, PHASE35_TRIGGER_NODE_TYPES } from "./connectors/triggers-dispatch";
+import type { A2ARegistry } from "@ai-orchestrator/a2a-sdk";
+import { defaultA2ARegistry, guardedA2AFetch, readA2aAgentSettings, runA2aAgentNode } from "./a2a-agent";
 import { NO_CODE_SANDBOX_PLAN, codeNodesDisabledError, runJavaScriptCode, runPythonCode, type CodeSandboxPlan } from "./code-sandbox";
 import { runWithSandboxOwner } from "./quickjs-sandbox";
 import { ownUsage, ownUsageOf, runAsUsageOwner, withoutUsage } from "./usage-ownership";
@@ -485,6 +487,8 @@ export interface WorkflowExecutionDependencies {
   callerWriteControls?: Workflow["settings"];
   providerRegistry: ProviderRegistry;
   mcpRegistry: MCPRegistry;
+  /** The A2A client adapters A2A Agent nodes call remote agents through. Default: a2a-sdk's createDefaultA2ARegistry(). */
+  a2aRegistry?: A2ARegistry;
   connectorRegistry: ConnectorRegistry;
   embeddingRegistry?: EmbeddingRegistry;
   /**
@@ -4499,8 +4503,9 @@ async function outboundPreCheck(
   const checked = await checkEgressRequest(request, common);
   if (checked.declassified.length > 0) context.labelScope?.declassify(checked.declassified);
   const first = request;
+  // HTTP Request and A2A Agent follow redirects themselves (guardedFetch): each hop is judged before it is followed.
   const onRedirect =
-    node.type === "http_request"
+    node.type === "http_request" || node.type === "a2a_agent"
       ? async (url: string) => {
           const chain = [...first.refs, httpDestinationRef(url)];
           first.refs.push(chain[chain.length - 1]!);
@@ -7413,10 +7418,17 @@ async function executeNodeHandler(
         const workerTools = attachedWorkerNodes.map(worker => {
           const workerConfig = toRecord(worker.config);
           const descriptionHint = typeof workerConfig.systemPromptTemplate === "string" ? workerConfig.systemPromptTemplate.slice(0, 100) : worker.name;
+          // A remote A2A agent is described by its node (the card is not fetched to list it).
+          const remoteDescription =
+            worker.type === "a2a_agent"
+              ? typeof workerConfig.toolDescription === "string" && workerConfig.toolDescription.trim()
+                ? workerConfig.toolDescription.trim()
+                : `Delegate a task to the remote agent ${worker.name} (over A2A) and get its answer.`
+              : undefined;
           return {
             serverId: `worker-${worker.id}`,
             name: workerDelegateToolName(worker.name),
-            description: `Delegate task to ${worker.name}. Hint: ${descriptionHint}`,
+            description: remoteDescription ?? `Delegate task to ${worker.name}. Hint: ${descriptionHint}`,
             inputSchema: {
               type: "object",
               properties: {
@@ -7697,6 +7709,29 @@ async function executeNodeHandler(
                      labelScope: workerScope
                   };
                 
+                  // A remote A2A agent acts outside the run: the workflow's write-tool gate asks a person first (once per
+                  // exact call; a re-run answers an approved call from its recorded result), unless the node is read-only.
+                  const remoteCallKey =
+                    workerNode.type === "a2a_agent" && writeGate?.enabled === true && !dependencies.replayNodeHook && toRecord(workerNode.config).readOnly !== true
+                      ? writeToolApprovalKey(node.id, `a2a:${workerNode.id}`, toolName, args)
+                      : undefined;
+                  if (remoteCallKey) {
+                    const replayed = writeToolSession?.replay(remoteCallKey);
+                    if (replayed?.hit) return replayed.result;
+                    if (writeToolSession?.takeApproval(remoteCallKey) !== true) {
+                      toolGatePendingApproval = writeToolApprovalPause({
+                        settings: writeGate ?? { enabled: false },
+                        nodeId: node.id,
+                        nodeName: node.name || node.id,
+                        serverKey: `a2a:${workerNode.id}`,
+                        serverLabel: `A2A agent ${workerNode.name || workerNode.id}`,
+                        toolName,
+                        args,
+                        classificationSource: "not_marked_read_only"
+                      });
+                      throw new AgentGuardInterrupt("approval_required", "tool_arguments", 0, toolGatePendingApproval.message);
+                    }
+                  }
                   // Phase 12.1 — the worker runs its own guard; a pause there pauses this agent too.
                   try {
                     const workerResult = await executeNode(workerNode, workerContext, {
@@ -7704,6 +7739,7 @@ async function executeNodeHandler(
                       activityRecorder: workerActivityRecorder(dependencies.activityRecorder, node.id)
                     });
                     if (workerScope) workerResultLabels.set(workerResultKey(toolName, invocation?.toolCallId), workerScope.finish(workerResult));
+                    if (remoteCallKey) writeToolSession?.record(remoteCallKey, workerResult);
                     return workerResult;
                   } catch (error) {
                     if (isApprovalHandoffSignal(error)) {
@@ -8700,6 +8736,54 @@ async function executeNodeHandler(
       });
     }
 
+    case "a2a_agent": {
+      const settings = readA2aAgentSettings(config);
+      if (!settings.cardUrl) {
+        throw new WorkflowError("A2A Agent needs the remote agent's card URL (or its base URL).", ErrorCategory.NODE_CONFIG, false, { nodeType: node.type });
+      }
+      // Phase 16 — under outbound checks the handler sends the message the check judged (rewritten when it rewrote it).
+      const message = outbound?.override.kind === "a2a" ? outbound.override.message : renderTemplate(settings.messageTemplate, templateData);
+      if (!message.trim()) {
+        throw new WorkflowError(
+          "A2A Agent: the message to send is empty. Set Message, or connect a step that gives a user_prompt.",
+          ErrorCategory.NODE_CONFIG,
+          false,
+          { nodeType: node.type }
+        );
+      }
+      let token: string | undefined;
+      const a2aSecretRef = toRecord(config.secretRef);
+      if (typeof a2aSecretRef.secretId === "string" && a2aSecretRef.secretId.trim()) {
+        const value = await dependencies.resolveSecret({ secretId: a2aSecretRef.secretId.trim() });
+        if (!value) throw new WorkflowError("A2A Agent: its token secret is set but could not be read.", ErrorCategory.NODE_CONFIG, false, { nodeType: node.type });
+        token = value;
+      }
+      emitNodeActivity(dependencies, node.id, {
+        kind: "resolved_input",
+        fields: { cardUrl: urlForActivity(settings.cardUrl), message: previewForActivity(message), timeoutMs: settings.timeoutMs }
+      });
+      try {
+        return await runA2aAgentNode({
+          nodeName: node.name || node.id,
+          settings,
+          message,
+          ...(token ? { token } : {}),
+          registry: dependencies.a2aRegistry ?? defaultA2ARegistry(),
+          fetch: guardedA2AFetch({
+            ...(dependencies.outboundGuard ? { outboundGuard: dependencies.outboundGuard } : {}),
+            ...(dependencies.outboundDnsResolver ? { outboundDnsResolver: dependencies.outboundDnsResolver } : {}),
+            ...(outbound?.onRedirect ? { onRedirect: outbound.onRedirect } : {})
+          }),
+          ...(dependencies.abortSignal ? { signal: dependencies.abortSignal } : {}),
+          runAborted: () => Boolean(dependencies.abortSignal?.aborted)
+        });
+      } catch (error) {
+        if (dependencies.abortSignal?.aborted) throw new WorkflowCanceledError(getAbortMessage(dependencies.abortSignal));
+        throw error;
+      }
+    }
+
+    case "a2a_trigger":
     case "manual_trigger":
     case "form_trigger":
     case "chat_trigger":

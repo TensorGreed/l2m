@@ -46,7 +46,8 @@ const EXPECTED_TARGET_TYPE: Record<string, string[]> = {
   chat_model: CHAT_MODEL_NODE_TYPES,
   memory: ["local_memory"],
   tool: ["mcp_tool", "workflow_tool"],
-  worker: ["agent_orchestrator", "supervisor_node"],
+  // A remote A2A agent is a worker too (its node also runs as a plain step).
+  worker: ["agent_orchestrator", "supervisor_node", "a2a_agent"],
   guard: ["guard"],
   protection: ["guard_protection"]
 };

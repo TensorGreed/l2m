@@ -349,10 +349,10 @@ function unfinishedIssues(workflow: Workflow): WorkflowValidationIssue[] {
 
 const NOTHING_PUBLISHED_MESSAGE = "No published version of this workflow can be loaded, so production runs are refused until a version is published.";
 
-const TRIGGER_PATH_NODE_TYPES = new Set(["webhook_input", "form_trigger", "mcp_server_trigger"]);
+const TRIGGER_PATH_NODE_TYPES = new Set(["webhook_input", "form_trigger", "mcp_server_trigger", "a2a_trigger"]);
 
 /**
- * The webhook, form and MCP-trigger paths a workflow answers on, compared
+ * The webhook, form, MCP-trigger and A2A-agent paths a workflow answers on, compared
  * without case. Webhooks count by path whatever their method, as
  * `/webhook/:path` routing matches the path first; an empty path falls back
  * to the node id, as routing does.
@@ -368,13 +368,15 @@ export function productionRoutingKeys(workflow: Pick<Workflow, "nodes">): Produc
       keys.set(`form:${config.path.trim().toLowerCase()}`, `Form path "${config.path.trim()}"`);
     } else if (node.type === "mcp_server_trigger" && typeof config.path === "string" && config.path.trim()) {
       keys.set(`mcp:${config.path.trim().toLowerCase()}`, `MCP trigger path "${config.path.trim()}"`);
+    } else if (node.type === "a2a_trigger" && typeof config.path === "string" && config.path.trim()) {
+      keys.set(`a2a:${config.path.trim().toLowerCase()}`, `A2A agent path "${config.path.trim()}"`);
     }
   }
   return [...keys].map(([key, label]) => ({ key, label }));
 }
 
 /**
- * A copy of `workflow` whose trigger paths (webhook, form, MCP trigger) are
+ * A copy of `workflow` whose trigger paths (webhook, form, MCP trigger, A2A agent) are
  * not in `used`: each taken path gets `-copy`, then `-copy-2`, `-copy-3`, ...
  * A webhook with no path (it answers on its node id) gets one. Used by
  * duplicate and template use, so a copy never answers on its source's paths.
@@ -384,7 +386,7 @@ export function withUniqueTriggerPaths<T extends Pick<Workflow, "nodes">>(workfl
   const nodes = (workflow.nodes ?? []).map((node) => {
     if (!TRIGGER_PATH_NODE_TYPES.has(node.type)) return node;
     const config = asRecord(node.config);
-    const prefix = node.type === "webhook_input" ? "webhook" : node.type === "form_trigger" ? "form" : "mcp";
+    const prefix = node.type === "webhook_input" ? "webhook" : node.type === "form_trigger" ? "form" : node.type === "a2a_trigger" ? "a2a" : "mcp";
     const raw = typeof config.path === "string" ? config.path.trim() : "";
     if (!raw && node.type !== "webhook_input") return node;
     const base = (raw || node.id).replace(/^\/+/, "").replace(/\/+$/, "") || node.id;

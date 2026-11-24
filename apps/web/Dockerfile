@@ -5,9 +5,11 @@
 # - build stage installs deps + compiles the React/Vite SPA to static files.
 # - runtime stage is nginx:1.31-alpine-slim serving the built dist/ over HTTP,
 #   with the nginx.conf from this folder proxying /api, /webhook, /webhook-test,
-#   and /health to the upstream `api` service (the docker-compose.yml service
-#   name). The HEALTHCHECK uses BusyBox's built-in wget, so nothing is added
-#   with apk.
+#   /mcp, /v1, /a2a and /health to the upstream `api` service on port 4000 (the
+#   docker-compose.yml service name). L2M_API_UPSTREAM=host:port points it
+#   elsewhere (nginx-api-upstream.sh, run by the nginx image's entrypoint
+#   before nginx starts). The HEALTHCHECK uses BusyBox's built-in wget, so
+#   nothing is added with apk.
 #
 # Build:   docker build -f apps/web/Dockerfile -t l2m-web .
 # Run:     docker run -p 5173:80 l2m-web
@@ -42,6 +44,7 @@ FROM nginx:1.31-alpine-slim@sha256:f45171d36c76a8b2f5ef97108a3a8a2294248a6578a0a
 # CVE-2026-4738 (critical, fixed in 1.4-r0). Drop once the pinned base has it.
 RUN apk upgrade --no-cache zlib
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --chmod=0755 apps/web/nginx-api-upstream.sh /docker-entrypoint.d/40-l2m-api-upstream.sh
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
 
 EXPOSE 80

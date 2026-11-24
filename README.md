@@ -25,6 +25,13 @@ Prefer not to pipe a script into a shell? Two commands do the same, in an empty 
 
 The generated password is printed once in `docker compose logs api`.
 
+Or run your own copy on a cloud host, in your own account (the platform bills you, not us):
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/TensorGreed/l2m)
+[![Deploy to DigitalOcean](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/TensorGreed/l2m/tree/main)
+
+What each one creates, the first sign-in and upgrades: [Deploy to a cloud host](https://lsquarem.com/docs/getting-started/deploy-to-a-cloud-host).
+
 More (ports, keys, upgrades, Helm, Postgres): [Install with Docker](https://lsquarem.com/docs/getting-started/install).
 To work on L2M itself you need Node.js 24+ and pnpm 10+: see [Run from source](https://lsquarem.com/docs/getting-started/run-from-source).
 

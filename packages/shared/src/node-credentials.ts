@@ -107,7 +107,9 @@ export const BESPOKE_CREDENTIAL_EDITOR_TYPES: ReadonlySet<string> = new Set([
   "mqtt_trigger",
   "chat_trigger",
   "sse_trigger",
-  "mcp_server_trigger"
+  "mcp_server_trigger",
+  "a2a_trigger",
+  "a2a_agent"
 ]);
 
 /** Attaches the credential specs to definitions and keeps `required` honest. */

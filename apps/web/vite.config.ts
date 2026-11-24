@@ -128,6 +128,11 @@ export default defineConfig(({ mode, command }) => {
           target: `http://${targetHost}:${targetPort}`,
           changeOrigin: true
         },
+        // A2A agents served by workflows (/a2a/<path>).
+        "/a2a/": {
+          target: `http://${targetHost}:${targetPort}`,
+          changeOrigin: true
+        },
         "/health": {
           target: `http://${targetHost}:${targetPort}`,
           changeOrigin: true

@@ -11,7 +11,7 @@ import { newNodeBaseConfig } from "@ai-orchestrator/shared";
  *   the examples as grey placeholders.
  * - A Schedule Trigger starts switched off, in the browser's time zone, so a scratch workflow never fires on its own.
  */
-const TRIGGER_PATH_NODE_TYPES = new Set(["webhook_input", "form_trigger", "mcp_server_trigger"]);
+const TRIGGER_PATH_NODE_TYPES = new Set(["webhook_input", "form_trigger", "mcp_server_trigger", "a2a_trigger"]);
 
 export interface NewNodeContext {
   /** Makes the random path suffix (tests pass a fixed one). */
@@ -62,7 +62,9 @@ export function newNodeConfig(
           ? "webhook"
           : nodeType === "form_trigger"
             ? "form"
-            : "tool";
+            : nodeType === "a2a_trigger"
+              ? "agent"
+              : "tool";
     config.path = `${base}-${(options.suffix ?? randomSuffix)()}`;
   }
   return config;

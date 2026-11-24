@@ -215,6 +215,7 @@ export default defineConfig({
         text: "Getting Started",
         items: [
           { text: "Install with Docker", link: "/getting-started/install" },
+          { text: "Deploy to a cloud host", link: "/getting-started/deploy-to-a-cloud-host" },
           { text: "Build your first MCP agent in 5 min", link: "/getting-started/build-your-first-mcp-agent" },
           { text: "Starter templates", link: "/getting-started/starter-templates" },
           { text: "Quickstart", link: "/getting-started/quickstart" },
@@ -281,6 +282,7 @@ export default defineConfig({
           { text: "Agent Loop", link: "/runtime/agent-loop" },
           { text: "Templates and Expressions", link: "/runtime/templates-and-expressions" },
           { text: "Expose a Workflow as an MCP Tool", link: "/runtime/workflow-as-mcp-tool" },
+          { text: "A2A Agents", link: "/runtime/a2a-agents" },
           { text: "Built-in Agent Tools", link: "/runtime/built-in-agent-tools" },
           { text: "Workflow Tool", link: "/runtime/workflow-tool" }
         ]

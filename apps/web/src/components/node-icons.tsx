@@ -80,6 +80,8 @@ export type NodePaletteIconKey =
   | "rss_trigger"
   | "sse_trigger"
   | "mcp_server_trigger"
+  | "a2a_trigger"
+  | "a2a_agent"
   | "kafka_trigger"
   | "rabbitmq_trigger"
   | "mqtt_trigger"
@@ -923,6 +925,25 @@ export function PaletteIcon({ icon }: { icon: NodePaletteIconKey }): JSX.Element
       </svg>
     );
   }
+  if (icon === "a2a_trigger" || icon === "a2a_agent") {
+    // Two agents exchanging a message; the trigger's arrow points in (it serves), the agent's points out (it calls).
+    const inbound = icon === "a2a_trigger";
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="6" cy="8" r="2.5" fill="none" stroke="#0D9488" strokeWidth="1.6" />
+        <circle cx="18" cy="8" r="2.5" fill="none" stroke="#0D9488" strokeWidth="1.6" />
+        <path d="M2.5 18c.5-2.5 2-4 3.5-4s3 1.5 3.5 4M14.5 18c.5-2.5 2-4 3.5-4s3 1.5 3.5 4" fill="none" stroke="#2DD4BF" strokeWidth="1.4" strokeLinecap="round" />
+        <path
+          d={inbound ? "M14 12H10M11.5 10.5 10 12l1.5 1.5" : "M10 12h4M12.5 10.5 14 12l-1.5 1.5"}
+          fill="none"
+          stroke="#14B8A6"
+          strokeWidth="1.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
   if (icon === "kafka_trigger") {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -1235,6 +1256,8 @@ const NODE_ICON_MAP: Record<string, NodePaletteIconKey> = {
   rss_trigger: "rss_trigger",
   sse_trigger: "sse_trigger",
   mcp_server_trigger: "mcp_server_trigger",
+  a2a_trigger: "a2a_trigger",
+  a2a_agent: "a2a_agent",
   kafka_trigger: "kafka_trigger",
   rabbitmq_trigger: "rabbitmq_trigger",
   mqtt_trigger: "mqtt_trigger",

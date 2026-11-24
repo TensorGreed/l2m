@@ -182,6 +182,35 @@ export function executeMcpServerTrigger(
   };
 }
 
+/**
+ * Expose as A2A Agent: the message another agent sent (the API puts it under `a2a` in the run's input). In an editor
+ * run there is no message: the run's user prompt stands in for its text.
+ */
+export function executeA2aTrigger(
+  _config: Record<string, unknown>,
+  ctx: TriggerContext
+): unknown {
+  const a2a = asRecord(ctx.globals.a2a);
+  const text =
+    typeof a2a.text === "string"
+      ? a2a.text
+      : typeof ctx.globals.user_prompt === "string"
+        ? ctx.globals.user_prompt
+        : "";
+  const contextId =
+    typeof a2a.contextId === "string" ? a2a.contextId : typeof ctx.globals.session_id === "string" ? ctx.globals.session_id : "";
+  return {
+    triggered: true,
+    trigger_type: "a2a",
+    user_prompt: text,
+    text,
+    data: a2a.data ?? null,
+    files: Array.isArray(a2a.files) ? a2a.files : [],
+    contextId,
+    messageId: typeof a2a.messageId === "string" ? a2a.messageId : null
+  };
+}
+
 function mqTriggerExecutor(kind: "kafka" | "rabbitmq" | "mqtt") {
   return function executeMqTrigger(
     _config: Record<string, unknown>,

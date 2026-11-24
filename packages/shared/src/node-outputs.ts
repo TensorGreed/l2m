@@ -75,6 +75,30 @@ export const NODE_OUTPUT_SPECS: Readonly<Record<string, NodeOutputSpec>> = Objec
     ],
     closed: true
   },
+  a2a_agent: {
+    fields: [
+      field("text", "The remote agent's answer as text (its message, else its artifacts' text parts)."),
+      field("state", "The task's final state: completed, or input-required when the remote agent asks for more."),
+      field("taskId", "The remote task's id."),
+      field("contextId", "The remote conversation's id."),
+      field("artifacts", "The task's artifacts as the remote agent sent them."),
+      field("data", "The data parts of the answer (one object when there is one)."),
+      field("agent", "The remote agent's name and endpoint.")
+    ],
+    closed: true
+  },
+  a2a_trigger: {
+    fields: [
+      field("user_prompt", "The text of the message the calling agent sent."),
+      field("text", "The same text."),
+      field("data", "The message's data parts (one object when there is one)."),
+      field("files", "References to files the message carried (URLs, names, media types)."),
+      field("contextId", "The conversation's id (also the run's session id)."),
+      field("messageId", "The message's id.")
+    ],
+    closed: false,
+    note: "Also has triggered and trigger_type."
+  },
   rag_retrieve: {
     fields: [
       field("query", "The query that was searched."),

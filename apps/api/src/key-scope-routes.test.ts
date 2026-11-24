@@ -453,6 +453,10 @@ describe("API keys limited to projects", () => {
     { pattern: /^(GET|POST|PUT|PATCH|DELETE) \/webhook(-test)?\/:path$/, why: "webhook triggers: anonymous, or the trigger's own token or HMAC" },
     { pattern: /^(GET|POST|DELETE) \/mcp\/:toolset$/, why: "the MCP gateway: MCP client credentials (a separate principal)" },
     { pattern: /^(GET|POST) \/v1\//, why: "the /v1 AI gateway: gateway client tokens (a separate principal)" },
+    {
+      pattern: /^(GET \/a2a\/:path\/\.well-known\/agent-card\.json|POST \/a2a\/:path)$/,
+      why: "A2A agents: the card is public; the endpoint takes the trigger's bearer token, or an API key through checkCaller, which refuses a project-limited key as on any route it does not list"
+    },
     { pattern: /^GET \/(health|ready|metrics)$/, why: "probes and metrics: anonymous, limited by network controls" },
     { pattern: /^GET \/(widget\.js|helper-chat)$/, why: "the embeddable widget's static files: public" }
   ];

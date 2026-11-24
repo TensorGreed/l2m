@@ -14,6 +14,7 @@ import { nanoid } from "nanoid";
 import { z } from "zod";
 import { createDefaultAgentRuntime } from "@ai-orchestrator/agent-runtime";
 import { createDefaultConnectorRegistry, createDefaultOAuthProviderRegistry } from "@ai-orchestrator/connector-sdk";
+import { createDefaultA2ARegistry } from "@ai-orchestrator/a2a-sdk";
 import {
   ContainerSandboxLauncher,
   McpRuntimeGuard,
@@ -314,7 +315,8 @@ import {
 } from "@ai-orchestrator/shared";
 import { GATEWAY_GUARD_CUSTOM_DATA_KEY, GATEWAY_USAGE_CUSTOM_DATA_KEY, parseGatewayRunUsage, stripReservedCustomData, parseGatewayGuardStack, GOLDEN_SET_FILE_DEFAULT_MAX_BYTES, GUARD_SIMULATION_MAX_CASES_DEFAULT } from "@ai-orchestrator/shared";
 import { registerApprovalRoutes } from "./approval-routes.js";
-import { registerExecutionRoutes } from "./execution-routes.js";
+import { cancelRun, registerExecutionRoutes } from "./execution-routes.js";
+import { registerA2aRoutes } from "./a2a-routes.js";
 import { registerServiceAccountRoutes } from "./service-account-routes.js";
 import { registerScimRoutes } from "./scim-routes.js";
 import { registerScimAdminRoutes } from "./scim-admin-routes.js";
@@ -1936,6 +1938,8 @@ export async function createApp(
   });
   await guardService.ensureBuiltIns();
   const connectorRegistry = createDefaultConnectorRegistry();
+  // A2A Agent nodes call remote agents through these adapters (JSON-RPC over HTTP, and the in-process mock agent).
+  const a2aRegistry = createDefaultA2ARegistry();
   // Phase 10.7 — stdio sandboxes. The instance label is derived from the
   // database location so the startup sweep only ever sees this deployment's
   // containers (and of those only the ones whose API process is gone).
@@ -2870,6 +2874,7 @@ export async function createApp(
           embeddingProviderRegistry: runEmbeddingRegistry,
           connectorRegistry,
           mcpRegistry: runPlan?.registry ?? mcpRegistry,
+          a2aRegistry,
           agentRuntime,
           // Session state, secrets, knowledge bases and sub-workflows are
           // scoped to the workflow's project (run-scope.ts); a sub-workflow
@@ -2932,7 +2937,7 @@ export async function createApp(
           mcpResourceMaxBytes: config.MCP_RESOURCE_MAX_BYTES,
           // Where code nodes run (container, in-process isolate, or disabled).
           codeSandbox: codeSandboxPlan,
-          // SSRF/egress policy for HTTP Request, Web Browse, Chart data.url and HTML PDF.
+          // SSRF/egress policy for HTTP Request, Web Browse, A2A Agent, Chart data.url and HTML PDF.
           outboundGuard,
           outboundDnsResolver: nodeDnsResolver,
           onMcpListChanged: input.replay ? undefined : (event) => mcpProbeService.onListChanged(event),
@@ -7397,7 +7402,8 @@ export async function createApp(
         callback(null, { ...mcpCorsOptions, allowedHeaders: gatewayCorsAllowedHeaders("on", request.headers["access-control-request-headers"]) });
         return;
       }
-      callback(null, url.startsWith("/v1/") ? aiGatewayCorsOptions : url.startsWith("/mcp/") ? mcpCorsOptions : studioCorsOptions);
+      // A2A agents are called with bearer tokens too, from any origin the gateway allows.
+      callback(null, url.startsWith("/v1/") || url.startsWith("/a2a/") ? aiGatewayCorsOptions : url.startsWith("/mcp/") ? mcpCorsOptions : studioCorsOptions);
     }
   });
 
@@ -13875,6 +13881,38 @@ button{padding:10px 16px;background:#2b6cb0;color:#fff;border:none;border-radius
       };
     }
   );
+
+  // A2A — a workflow with an Expose as A2A Agent trigger, served as an Agent2Agent agent (a2a-routes.ts).
+  registerA2aRoutes({
+    app,
+    config,
+    store,
+    loadProductionWorkflow: productionTriggerWorkflow,
+    deactivatedMatch,
+    signedInEditorOf: async (request, workflowId) => await signedInEditorOf(request, workflowId),
+    pausedRefusal: async (workflow) => await releaseService.pausedRefusal(workflow),
+    resolveSecret: async (ref) => await secretService.resolveSecret(ref),
+    apiKeyCaller: async (request, roles) => {
+      const authorization = getHeaderValue(request.headers as Record<string, unknown>, "authorization");
+      // Only the bearer header counts: a session cookie never authorizes an A2A call.
+      const checked = await checkCaller(
+        { cookies: {}, headers: { authorization }, method: request.method, routeOptions: { url: request.routeOptions?.url } },
+        roles
+      );
+      return checked.ok ? { ok: true, user: checked.user } : { ok: false, status: checked.status, error: String(asRecord(checked.body).error ?? "Not allowed") };
+    },
+    mayExecute: async (user, workflowId) => (await runAccess.workflow(user, workflowId, "workflow:execute")).ok,
+    sessionOwnerOptionFor: async (user, workflow) => await sessionOwnerOptionFor(user, workflow),
+    requireRole: (request, reply, roles) => requireRole(request, reply, roles),
+    runDispatcher,
+    dispatchPoolOf,
+    admitRunBudget,
+    cancelRun: async (execution, reason) => await cancelRun({ store, activeExecutions, approvalService, clusterMode, announce }, execution, reason, null),
+    a2aRegistry,
+    outboundGuard,
+    safeEqual: safeEqualSecret,
+    log: { warn: (fields, message) => app.log.warn(fields, message) }
+  });
 
   // 12.6 — one per-client limiter for the MCP gateway and /v1: a client's own rate limit is one allowance for both.
   const gatewayClientLimiter = new GatewayClientLimiter({

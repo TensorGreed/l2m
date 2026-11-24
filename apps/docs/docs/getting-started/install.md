@@ -10,6 +10,9 @@ Docker with Compose v2 (Docker Desktop, or Docker Engine with the compose plugin
 amd64 or arm64. You do not need Node.js. On Windows, run the commands below in WSL or Git Bash (in PowerShell,
 `curl` is a different command; use `curl.exe` for the two-command install).
 
+To run it on a cloud host in your own account instead, without a machine of your own, see
+[Deploy to a cloud host](./deploy-to-a-cloud-host.md).
+
 ## The installer
 
 ```bash
@@ -111,6 +114,8 @@ Every release image is signed and carries an SBOM and build provenance. The same
 
 ## Beyond one machine
 
+- A cloud host, in your own account, with one button (Render or DigitalOcean App Platform):
+  [Deploy to a cloud host](./deploy-to-a-cloud-host.md).
 - Postgres, several API replicas and a webhook tier: `docker-compose.prod.yml` in the repository, and
   [Postgres](../operations/postgres.md), [Scaling](../operations/scaling.md).
 - Kubernetes: the Helm chart in `ops/helm/l2m`.

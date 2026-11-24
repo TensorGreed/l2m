@@ -49,6 +49,7 @@ export const REPLAY_NODE_CLASSES: Readonly<Record<WorkflowNodeType, ReplayNodeCl
   rss_trigger: "trigger",
   sse_trigger: "trigger",
   mcp_server_trigger: "trigger",
+  a2a_trigger: "trigger",
   kafka_trigger: "trigger",
   rabbitmq_trigger: "trigger",
   mqtt_trigger: "trigger",
@@ -181,6 +182,8 @@ export const REPLAY_NODE_CLASSES: Readonly<Record<WorkflowNodeType, ReplayNodeCl
   // External side effects (and anything that can be one: any HTTP method,
   // queries that can write, stores that can upsert, sub-workflows).
   http_request: "write",
+  // A remote agent over A2A: anything it does is outside the run.
+  a2a_agent: "write",
   azure_storage: "write",
   azure_cosmos_db: "write",
   azure_monitor_http: "write",
@@ -982,6 +985,8 @@ export const REPLAY_LIVE_READ_POLICY: Readonly<Record<WorkflowNodeType, ReplayLi
   rss_trigger: "refused",
   sse_trigger: "refused",
   mcp_server_trigger: "refused",
+  a2a_trigger: "refused",
+  a2a_agent: "refused",
   kafka_trigger: "refused",
   rabbitmq_trigger: "refused",
   mqtt_trigger: "refused",
