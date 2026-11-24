@@ -20,7 +20,7 @@ Fields that take <span v-pre>`{{ }}`</span> templates (prompts, URLs, bodies, va
 ---
 ### `a2a_trigger` — Expose as A2A Agent
 
-Publish this workflow as an Agent2Agent (A2A) agent that other agents can discover and send tasks to. Its Agent Card is served at /a2a/<path>/.well-known/agent-card.json and its A2A endpoint at /a2a/<path>. Each task runs the workflow's production version as a normal run; downstream nodes read the message as {{user_prompt}}.
+Publish this workflow as an Agent2Agent (A2A) agent that other agents can discover and send tasks to. Its Agent Card and A2A endpoint are served under /a2a/ at the trigger's path (the node shows the card URL to copy). Each task runs the workflow's production version as a normal run; downstream nodes read the message as {{user_prompt}}.
 
 **Config fields**
 
