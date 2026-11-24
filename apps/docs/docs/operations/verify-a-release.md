@@ -52,7 +52,7 @@ Every `.cdx.json` file also has a build provenance attestation, so a downloaded 
 Set these once for the commands below:
 
 ```bash
-VERSION=v0.1.0   # the release tag
+VERSION=v0.1.1   # the release tag
 REPO=TensorGreed/l2m
 API=ghcr.io/tensorgreed/l2m
 WEB=ghcr.io/tensorgreed/l2m-web
@@ -186,10 +186,10 @@ kubectl get pods -l app.kubernetes.io/instance=ao \
 # compose.release.yml
 services:
   api:
-    image: ghcr.io/tensorgreed/l2m:v0.1.0@sha256:<api digest>
+    image: ghcr.io/tensorgreed/l2m:v0.1.1@sha256:<api digest>
     build: !reset null
   web:
-    image: ghcr.io/tensorgreed/l2m-web:v0.1.0@sha256:<web digest>
+    image: ghcr.io/tensorgreed/l2m-web:v0.1.1@sha256:<web digest>
     build: !reset null
 ```
 

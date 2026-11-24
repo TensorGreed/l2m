@@ -2,8 +2,8 @@ apiVersion: v2
 name: l2m
 description: Visual AI workflow builder/runtime (Fastify API, React Studio, Postgres-backed)
 type: application
-version: 0.1.0
-appVersion: "0.1.0"
+version: 0.1.1
+appVersion: "0.1.1"
 home: https://github.com/TensorGreed/l2m
 sources:
   - https://github.com/TensorGreed/l2m

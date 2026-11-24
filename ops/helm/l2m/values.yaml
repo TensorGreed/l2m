@@ -9,7 +9,7 @@ fullnameOverride: ""
 
 image:
   repository: ghcr.io/tensorgreed/l2m
-  # Empty: the release this chart belongs to, "v" + appVersion (v0.1.0). Set "latest" only to follow new releases.
+  # Empty: the release this chart belongs to, "v" + appVersion (v0.1.1). Set "latest" only to follow new releases.
   tag: ""
   pullPolicy: IfNotPresent
 

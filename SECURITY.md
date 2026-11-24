@@ -43,7 +43,7 @@ Every `v*` release publishes `ghcr.io/tensorgreed/l2m` (API) and `ghcr.io/tensor
 The GitHub Release carries the CycloneDX SBOMs of both images and of the source tree (`pnpm-lock.yaml`), the image digests and a `SHA256SUMS` file; each SBOM file has its own provenance attestation.
 
 ```bash
-VERSION=v0.1.0
+VERSION=v0.1.1
 DIGEST=$(docker buildx imagetools inspect ghcr.io/tensorgreed/l2m:$VERSION --format '{{json .Manifest.Digest}}' | tr -d '"')
 
 cosign verify ghcr.io/tensorgreed/l2m@$DIGEST \
