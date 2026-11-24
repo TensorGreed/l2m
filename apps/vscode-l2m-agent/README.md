@@ -110,6 +110,10 @@ Preferred response:
 }
 ```
 
+## When a run fails
+
+If the workflow's model call fails (a model the server does not have, a wrong key, a model server that is down or too slow), the chat shows one short message naming the problem and the workflow whose chat model settings to check. Other failed runs name the node that failed. The full response from L2M is in the **L2M Agent** output channel (**View → Output**, then pick **L2M Agent**).
+
 ## Commands
 
 - `L2M Agent: Open Chat`: Opens the `L2M Agent` Activity Bar container and focuses the sidebar chat view.
@@ -149,4 +153,5 @@ The unit tests cover:
 - Response parsing for messages, code blocks, attachments, actions, and helper-chat compatibility.
 - Context budget truncation and session-memory compaction.
 - L2M `context_update` merging into local memory.
+- Failed runs (a failed model call, a failed node, a run without an answer) turned into short chat messages.
 - Patch path safety, single-file validation, unified diff application, and context mismatch detection.
