@@ -120,6 +120,7 @@ import {
   type McpToolAccess,
   type SecretListItem
 } from "../lib/api";
+import { A2AAgentCardCheck, A2AAgentUrls } from "./A2AFields";
 
 export interface NodeInputOption {
   id: string;
@@ -10250,6 +10251,127 @@ export function NodeInspector({
             />
           </>
         );
+      case "a2a_trigger": {
+        const authMode = toStringValue(config.authMode, "api_key");
+        return (
+          <>
+            <TextField
+              label="Agent Path"
+              value={toStringValue(config.path)}
+              onChange={(next) => setConfig((current) => ({ ...current, path: next }))}
+              placeholder="research-agent"
+              help="The agent is served at /a2a/<path>. Letters, digits, dot, dash and underscore."
+            />
+            <TextField
+              label="Agent Name"
+              value={toStringValue(config.agentName)}
+              onChange={(next) => setConfig((current) => ({ ...current, agentName: next || undefined }))}
+              placeholder="The workflow's name"
+            />
+            <TextAreaField
+              label="Description"
+              value={toStringValue(config.agentDescription)}
+              onChange={(next) => setConfig((current) => ({ ...current, agentDescription: next }))}
+              rows={2}
+              placeholder={toStringValue(sampleConfig.agentDescription)}
+            />
+            <SelectField
+              label="Auth Mode"
+              value={authMode}
+              onChange={(next) => setConfig((current) => ({ ...current, authMode: next }))}
+              options={[
+                { value: "api_key", label: "L2M API key" },
+                { value: "bearer", label: "Bearer token" },
+                { value: "public", label: "Public" }
+              ]}
+            />
+            {authMode === "bearer" && !toStringValue(asRecord(config.secretRef).secretId) && (
+              <div className="cfg-tip" data-testid="a2a-trigger-needs-secret">
+                Pick the secret that holds the token. Until then the agent refuses every task.
+              </div>
+            )}
+            {authMode === "bearer" &&
+              renderCredentialSecretField({
+                fieldKey: "a2a_trigger_bearer",
+                label: "Bearer Token Secret",
+                value: toStringValue(asRecord(config.secretRef).secretId),
+                noneLabel: "Select secret",
+                preferredProvider: "a2a",
+                onSelect: (next) =>
+                  setConfig((current) => ({
+                    ...current,
+                    secretRef: next ? { secretId: next } : undefined
+                  }))
+              })}
+            <A2AAgentUrls apiBase={getApiBaseUrl()} path={toStringValue(config.path)} authMode={authMode} />
+            <div className="cfg-tip">
+              The caller&apos;s message is <code>{"{{user_prompt}}"}</code> (its JSON data part is <code>{"{{data}}"}</code>); the
+              run&apos;s output is the answer. A run waiting for an approval reports <code>input-required</code> until a person decides.
+            </div>
+          </>
+        );
+      }
+      case "a2a_agent": {
+        const timeoutMs = typeof config.timeoutMs === "number" ? config.timeoutMs : 120000;
+        return (
+          <>
+            <TextField
+              label="Agent URL"
+              value={toStringValue(config.cardUrl)}
+              onChange={(next) => setConfig((current) => ({ ...current, cardUrl: next }))}
+              placeholder="https://agents.example.com/a2a/research"
+              help="The remote agent's base URL or its Agent Card URL (/.well-known/agent-card.json is added when missing)."
+            />
+            <A2AAgentCardCheck cardUrl={toStringValue(config.cardUrl)} />
+            {renderCredentialSecretField({
+              fieldKey: "a2a_agent_token",
+              label: "Bearer Token Secret",
+              value: toStringValue(asRecord(config.secretRef).secretId),
+              noneLabel: "No token",
+              preferredProvider: "a2a",
+              hint: "Optional: sent as Authorization: Bearer to the agent (never to another host).",
+              onSelect: (next) =>
+                setConfig((current) => ({
+                  ...current,
+                  secretRef: next ? { secretId: next } : undefined
+                }))
+            })}
+            <TextAreaField
+              label="Message"
+              value={toStringValue(config.messageTemplate)}
+              onChange={(next) => setConfig((current) => ({ ...current, messageTemplate: next || undefined }))}
+              rows={3}
+              placeholder="{{user_prompt}}"
+            />
+            <NumberField
+              label="Timeout (ms)"
+              value={timeoutMs}
+              min={1000}
+              step={1000}
+              onChange={(next) => setConfig((current) => ({ ...current, timeoutMs: next > 0 ? next : undefined }))}
+              help="How long the remote task may take. On timeout the node cancels the task there and fails."
+            />
+            <div className="cfg-tip">
+              As a step: outputs <code>text</code>, <code>state</code>, <code>data</code> and <code>taskId</code>. As a Supervisor
+              worker (attach it to the <code>worker</code> port): the supervisor delegates to it like a local agent, and the Message is
+              the supervisor&apos;s task unless set.
+            </div>
+            <TextAreaField
+              label="Worker Description"
+              value={toStringValue(config.toolDescription)}
+              onChange={(next) => setConfig((current) => ({ ...current, toolDescription: next || undefined }))}
+              rows={2}
+              placeholder="What the supervisor should delegate to this agent"
+            />
+            <ToggleField
+              label="Read-only agent"
+              checked={toBooleanValue(config.readOnly, false)}
+              onChange={(next) => setConfig((current) => ({ ...current, readOnly: next || undefined }))}
+              help="Turn on only when this agent changes nothing. As a worker of a supervisor with write-tool approval, its calls then skip the approval. Off by default."
+            />
+          </>
+        );
+      }
       case "kafka_trigger":
         return (
           <>

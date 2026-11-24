@@ -28,8 +28,9 @@ const IMPLICIT_USER_PROMPT_READERS: ReadonlySet<string> = new Set([
   // The run's prompt wins over the node's saved text (resolveRuntimeUserPrompt).
   "text_input",
   "user_prompt",
-  // The chat message falls back to the run's prompt.
+  // The chat message (and an A2A message, in an editor run) falls back to the run's prompt.
   "chat_trigger",
+  "a2a_trigger",
   // promptRead(templateData, [promptKey, "user_prompt"]).
   "llm_call",
   "openai_chat_model",
@@ -70,7 +71,8 @@ const DEFAULT_USER_PROMPT_TEMPLATES: Readonly<Record<string, (config: Record<str
   prompt_template: (config) => typeof config.template !== "string",
   rag_retrieve: (config) => typeof config.queryTemplate !== "string",
   rerank: (config) => typeof config.queryTemplate !== "string",
-  chat_intent_router: (config) => typeof config.inputTemplate !== "string" || !config.inputTemplate.trim()
+  chat_intent_router: (config) => typeof config.inputTemplate !== "string" || !config.inputTemplate.trim(),
+  a2a_agent: (config) => typeof config.messageTemplate !== "string" || !config.messageTemplate.trim()
 };
 
 const MAX_SCAN_DEPTH = 12;

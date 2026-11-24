@@ -28,6 +28,7 @@ describe("effect-free entry nodes", () => {
   it("are the pass-through triggers and static inputs, never a poller, query or consumer", () => {
     expect([...ENTRY_NODE_TYPES].sort()).toEqual(
       [
+        "a2a_trigger",
         "chat_trigger",
         "discord_trigger",
         "error_trigger",
@@ -65,6 +66,7 @@ describe("effect-free entry nodes", () => {
 describe("live entry points that can be switched off", () => {
   it("covers webhooks, forms, chats, MCP triggers, schedules and app triggers, each with an `active` switch; unset is on", () => {
     expect([...LIVE_ENTRY_NODE_TYPES].sort()).toEqual([
+      "a2a_trigger",
       "chat_trigger",
       "discord_trigger",
       "form_trigger",

@@ -63,6 +63,7 @@ COPY packages/workflow-engine/package.json packages/workflow-engine/
 COPY packages/guard-sdk/package.json packages/guard-sdk/
 COPY packages/community-sdk/package.json packages/community-sdk/
 COPY packages/otel/package.json packages/otel/
+COPY packages/a2a-sdk/package.json packages/a2a-sdk/
 
 FROM toolchain AS deps
 RUN pnpm install --frozen-lockfile

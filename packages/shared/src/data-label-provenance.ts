@@ -9,7 +9,7 @@ import { inputProvenance, PROVENANCE_LABELS, type DataLabels, type ProvenanceLab
 /** Node categories that bring in content from outside the workflow. */
 const EXTERNAL_NODE_CATEGORIES = new Set(["Connector", "RAG", "MCP"]);
 /** Node types that fetch from outside the workflow whatever their category. */
-const EXTERNAL_NODE_TYPES = new Set(["http_request", "web_browse", "mcp_tool"]);
+const EXTERNAL_NODE_TYPES = new Set(["http_request", "web_browse", "mcp_tool", "a2a_agent"]);
 
 const categoryByType = new Map<string, string>();
 

@@ -128,7 +128,7 @@ export function parseStoredDataLabels(value: unknown): DataLabels | null {
 export type RunInputOrigin = "scheduler" | "user" | "external";
 
 /** Production triggers whose input a person typed (chat, forms, app messages) or an authenticated caller sent. */
-const USER_INPUT_TRIGGERS = new Set(["chat", "form", "webhook_api", "webhook_api_stream", "mcp_server", "slack_webhook", "telegram_webhook", "discord_webhook"]);
+const USER_INPUT_TRIGGERS = new Set(["chat", "form", "webhook_api", "webhook_api_stream", "mcp_server", "a2a", "slack_webhook", "telegram_webhook", "discord_webhook"]);
 
 /**
  * The provenance of a run's input. `trusted` only for the server's own

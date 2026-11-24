@@ -162,6 +162,7 @@ describe("phase 3.5 triggers — dispatch", () => {
         "rss_trigger",
         "sse_trigger",
         "mcp_server_trigger",
+        "a2a_trigger",
         "kafka_trigger",
         "rabbitmq_trigger",
         "mqtt_trigger"

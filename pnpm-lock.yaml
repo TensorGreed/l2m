@@ -29,6 +29,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@ai-orchestrator/a2a-sdk':
+        specifier: workspace:*
+        version: link:../../packages/a2a-sdk
       '@ai-orchestrator/agent-runtime':
         specifier: workspace:*
         version: link:../../packages/agent-runtime
@@ -214,6 +217,12 @@ importers:
         specifier: ^8.3.5
         version: 8.3.7(@types/node@24.12.0)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)
 
+  packages/a2a-sdk:
+    dependencies:
+      '@ai-orchestrator/shared':
+        specifier: workspace:*
+        version: link:../shared
+
   packages/agent-runtime:
     dependencies:
       '@ai-orchestrator/mcp-sdk':
@@ -355,6 +364,9 @@ importers:
 
   packages/workflow-engine:
     dependencies:
+      '@ai-orchestrator/a2a-sdk':
+        specifier: workspace:*
+        version: link:../a2a-sdk
       '@ai-orchestrator/agent-runtime':
         specifier: workspace:*
         version: link:../agent-runtime

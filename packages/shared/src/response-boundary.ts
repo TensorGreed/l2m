@@ -7,7 +7,7 @@ import type { GuardActionValue } from "./guard";
  * sets with a `response` channel check anything; the built-in rule set has none, so nothing changes until an admin or
  * builder adds one.
  */
-export const RESPONSE_BOUNDARY_SURFACES = ["webhook", "chat", "mcp_invoke"] as const;
+export const RESPONSE_BOUNDARY_SURFACES = ["webhook", "chat", "mcp_invoke", "a2a"] as const;
 export type ResponseBoundarySurface = (typeof RESPONSE_BOUNDARY_SURFACES)[number];
 
 /** Where the run's answer goes. Set by the API for externally answered triggers only, never from a request body. */
@@ -41,7 +41,8 @@ const BOUNDARY_TRIGGERS: Readonly<Record<string, ResponseBoundarySurface>> = {
   webhook: "webhook",
   webhook_test: "webhook",
   chat: "chat",
-  mcp_server: "mcp_invoke"
+  mcp_server: "mcp_invoke",
+  a2a: "a2a"
 };
 
 /** The boundary a run of this trigger type answers across, or undefined (editor, schedule, builder routes, gateway). */

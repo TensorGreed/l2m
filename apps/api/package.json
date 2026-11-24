@@ -17,6 +17,7 @@
     "admin:break-glass": "tsx src/scripts/admin-break-glass.ts"
   },
   "dependencies": {
+    "@ai-orchestrator/a2a-sdk": "workspace:*",
     "@ai-orchestrator/agent-runtime": "workspace:*",
     "@ai-orchestrator/community-sdk": "workspace:*",
     "@ai-orchestrator/connector-sdk": "workspace:*",

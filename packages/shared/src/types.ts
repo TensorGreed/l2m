@@ -163,6 +163,8 @@ export type WorkflowNodeType =
   | "rss_trigger"
   | "sse_trigger"
   | "mcp_server_trigger"
+  | "a2a_trigger"
+  | "a2a_agent"
   | "kafka_trigger"
   | "rabbitmq_trigger"
   | "mqtt_trigger"

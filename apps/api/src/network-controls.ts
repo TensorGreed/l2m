@@ -131,6 +131,7 @@ export function classifyNetworkScope(input: ScopeRequest): NetworkScope[] {
     startsWithSegment(path, "/webhook") ||
     startsWithSegment(path, "/webhook-test") ||
     startsWithSegment(path, "/api/mcp-server") ||
+    startsWithSegment(path, "/a2a") ||
     (startsWithSegment(path, "/api/webhooks") && !startsWithSegment(path, "/api/webhooks/execute"))
   ) {
     return ["webhook"];

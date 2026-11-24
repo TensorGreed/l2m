@@ -1,6 +1,6 @@
 ---
 title: "Agent nodes: config fields and defaults"
-description: "Reference for the 3 nodes in the L2M Agent category, with every config field and default."
+description: "Reference for the 4 nodes in the L2M Agent category, with every config field and default."
 ---
 
 <!--
@@ -13,11 +13,50 @@ description: "Reference for the 3 nodes in the L2M Agent category, with every co
 
 Tool-calling agent runtimes and the multi-turn memory + artifact stores that back them.
 
-3 nodes.
+4 nodes.
 
 Fields that take <span v-pre>`{{ }}`</span> templates (prompts, URLs, bodies, values) read the steps connected straight into the node; [Templates and expressions](/runtime/templates-and-expressions) covers reading earlier steps with `results`.
 
 ---
+### `a2a_agent` — A2A Agent
+
+Sends a task to a remote Agent2Agent (A2A) agent and outputs its answer. Use it as a step, or attach it to a Supervisor's worker port to let the supervisor delegate to the remote agent like a local worker. The URL goes through the outbound URL checks; a token comes only from a secret.
+
+**Config fields**
+
+| Field | Type | Required | Values |
+|---|---|---|---|
+| `cardUrl` | `string` | yes | — |
+| `secretRef` | `object` | no | — |
+| `messageTemplate` | `string` | no | — |
+| `timeoutMs` | `number` | no | — |
+| `toolDescription` | `string` | no | — |
+| `readOnly` | `boolean` | no | — |
+
+**Outputs**
+
+| Field | What it holds |
+|---|---|
+| `text` | The remote agent's answer as text (its message, else its artifacts' text parts). |
+| `state` | The task's final state: completed, or input-required when the remote agent asks for more. |
+| `taskId` | The remote task's id. |
+| `contextId` | The remote conversation's id. |
+| `artifacts` | The task's artifacts as the remote agent sent them. |
+| `data` | The data parts of the answer (one object when there is one). |
+| `agent` | The remote agent's name and endpoint. |
+
+**Example config**
+
+```json
+{
+  "cardUrl": "https://agents.example.com/research/.well-known/agent-card.json",
+  "messageTemplate": "{{user_prompt}}",
+  "timeoutMs": 120000
+}
+```
+
+---
+
 ### `agent_orchestrator` — Agent Orchestrator
 
 Runs iterative tool-aware agent loop.
