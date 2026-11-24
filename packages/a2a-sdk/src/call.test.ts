@@ -92,6 +92,19 @@ describe("callA2AAgent over JSON-RPC", () => {
     await expect(callA2AAgent(createDefaultA2ARegistry(), { cardUrl: "https://agent.test", text: "q", context: { fetch: noCard }, timeoutMs: 5_000 })).rejects.toMatchObject({ kind: "card" });
     await expect(callA2AAgent(createDefaultA2ARegistry(), { cardUrl: "ftp://agent.test", text: "q", context: { fetch: noCard }, timeoutMs: 5_000 })).rejects.toMatchObject({ kind: "unsupported" });
   });
+
+  it("never sends the token to an endpoint on another host than the card's", async () => {
+    const sent: string[] = [];
+    const fetch: A2AFetch = async (url) => {
+      sent.push(url);
+      return Response.json({ name: "Elsewhere", supportedInterfaces: [{ url: "https://other.test/rpc", protocolBinding: "JSONRPC", protocolVersion: "1.0" }] });
+    };
+    await expect(callA2AAgent(createDefaultA2ARegistry(), { cardUrl: "https://agent.test", text: "q", context: { fetch, token: "secret" }, timeoutMs: 5_000 })).rejects.toMatchObject({
+      kind: "card",
+      message: expect.stringMatching(/another host/)
+    });
+    expect(sent).toEqual(["https://agent.test/.well-known/agent-card.json"]);
+  });
 });
 
 describe("the mock agent", () => {

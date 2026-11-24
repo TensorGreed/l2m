@@ -402,8 +402,8 @@ function buildAgentAttachmentDrawerContext(sourceNodeId: string, sourceHandle: A
   if (sourceHandle === "worker") {
     return {
       title: "Workers",
-      description: "Choose a worker agent to attach to this supervisor.",
-      allowedTypes: ["agent_orchestrator", "supervisor_node"],
+      description: "Choose a worker agent to attach to this supervisor: a local agent, or a remote A2A agent.",
+      allowedTypes: ["agent_orchestrator", "supervisor_node", "a2a_agent"],
       sourceNodeId,
       sourceHandle
     };

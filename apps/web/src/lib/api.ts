@@ -1172,6 +1172,23 @@ export async function discoverMcpTools(payload: {
   });
 }
 
+/** What a remote A2A agent's card says, read by the server through its outbound URL guard (builders). */
+export interface A2ACardPreview {
+  cardUrl: string;
+  name: string;
+  description: string;
+  version: string | null;
+  endpoint: string;
+  protocolVersion: string;
+  streaming: boolean;
+  securitySchemes: string[];
+  skills: Array<{ id: string; name: string; description: string }>;
+}
+
+export async function previewA2ACard(cardUrl: string) {
+  return apiRequest<A2ACardPreview>("/api/a2a/card-preview", { method: "POST", body: JSON.stringify({ cardUrl }) });
+}
+
 export interface McpTestToolResult {
   ok: boolean;
   output: unknown;

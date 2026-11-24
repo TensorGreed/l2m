@@ -26,6 +26,13 @@ describe("validateConnection", () => {
     expect(validateConnection({ source: "set", target: "mem", sourceHandle: "memory" }, nodes, []).ok).toBe(false);
   });
 
+  it("takes an A2A Agent on a supervisor's worker port, and as a plain step after any node", () => {
+    const nodes = [n("sup", "supervisor_node"), n("remote", "a2a_agent"), n("set", "set_node")];
+    expect(validateConnection({ source: "sup", target: "remote", sourceHandle: "worker" }, nodes, [])).toEqual({ ok: true, sourceHandle: "worker" });
+    expect(validateConnection({ source: "set", target: "remote" }, nodes, [])).toEqual({ ok: true, sourceHandle: null });
+    expect(validateConnection({ source: "sup", target: "set", sourceHandle: "worker" }, nodes, []).ok).toBe(false);
+  });
+
   it("puts a protection provider on a Content Rules node's protection port", () => {
     const nodes = [n("rules", "guard"), n("p", "guard_protection")];
     expect(validateConnection({ source: "rules", target: "p", sourceHandle: "pass" }, nodes, [])).toEqual({ ok: true, sourceHandle: "protection" });

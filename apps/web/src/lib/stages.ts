@@ -568,6 +568,10 @@ export function summarizeNode(node: { type: string; config?: unknown }): string 
     }
     case "workflow_tool":
       return join([str(c.workflowId, 24) ?? "no workflow", c.readOnly === true ? "read-only" : null]);
+    case "a2a_agent":
+      return join([str(c.cardUrl, 48) ?? "no agent URL", c.readOnly === true ? "read-only" : null]);
+    case "a2a_trigger":
+      return join([c.path ? `/a2a/${String(c.path)}` : null, str(c.authMode) ?? "api_key"]);
     case "local_memory":
       return join([`ns ${str(c.namespace) ?? "default"}`, typeof c.maxMessages === "number" ? `${c.maxMessages} msgs` : null]);
     case "http_request":

@@ -22,6 +22,7 @@ const TERMINAL_TYPES = new Set([
   "manual_trigger",
   "error_trigger",
   "mcp_server_trigger",
+  "a2a_trigger",
   "sub_workflow_trigger",
   "output",
   "helper_chat_response",
