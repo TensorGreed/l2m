@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
-import { loadRunInput, runInputFields, runInputPayload, runNeedsPrompt, saveRunInput, triggerSamplePrompt } from "./run-input";
+import { loadRunInput, RUN_ASKS_FOR_INPUT, runInputFields, runInputPayload, runNeedsPrompt, saveRunInput, triggerSamplePrompt } from "./run-input";
 
 afterEach(() => {
   window.localStorage.clear();
@@ -39,6 +39,10 @@ describe("the editor's Run input", () => {
 });
 
 describe("when Run asks for the input first", () => {
+  it("asks in the studio (the public demo answers a Run with its own notice instead)", () => {
+    expect(RUN_ASKS_FOR_INPUT).toBe(true);
+  });
+
   it("asks for an agent on {{user_prompt}} behind a manual trigger", () => {
     expect(runNeedsPrompt([{ type: "manual_trigger", config: {} }, { type: "agent_orchestrator", config: { userPromptTemplate: "{{user_prompt}}" } }])).toBe(true);
     expect(runNeedsPrompt([{ type: "user_prompt", config: { text: "" } }, { type: "llm_call", config: {} }])).toBe(true);

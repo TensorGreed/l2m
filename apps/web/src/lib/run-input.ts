@@ -67,6 +67,12 @@ function config(node: RunPromptNode): Record<string, unknown> {
   return node.config && typeof node.config === "object" && !Array.isArray(node.config) ? (node.config as Record<string, unknown>) : {};
 }
 
+/**
+ * Whether Run opens the Run input first when a workflow has nothing to work on. Not in the public demo build: there a
+ * Run goes to the in-browser backend, which answers with the demo's own notice and offers the recorded question.
+ */
+export const RUN_ASKS_FOR_INPUT: boolean = import.meta.env.MODE !== "demo";
+
 /** Triggers whose runs bring their own content (a webhook body, a form, a tool call's arguments). */
 const OWN_INPUT_TRIGGERS = new Set(["webhook_input", "form_trigger", "mcp_server_trigger", "a2a_trigger", "schedule_trigger"]);
 

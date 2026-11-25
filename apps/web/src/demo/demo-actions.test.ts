@@ -45,21 +45,6 @@ describe("Try the recorded question", () => {
     expect(clicked).toHaveBeenCalledTimes(1);
   });
 
-  it("in the editor, types the question into the Run input when Run asks for it, and runs it", () => {
-    document.body.innerHTML = `${open("wf-1")}<button aria-label="Run workflow"></button>`;
-    // Run opens the Run input (the workflow has nothing to work on without a prompt).
-    document.querySelector("button")!.addEventListener("click", () => {
-      document.body.insertAdjacentHTML("beforeend", '<textarea data-testid="run-input-prompt"></textarea><button data-testid="run-input-run"></button>');
-      document.querySelector('[data-testid="run-input-run"]')!.addEventListener("click", ran);
-    });
-    const ran = vi.fn(() => {
-      expect(document.querySelector<HTMLTextAreaElement>('[data-testid="run-input-prompt"]')!.value).toBe("What is MCP?");
-    });
-    const backend = { armRecordedInput: vi.fn(() => "What is MCP?") };
-    expect(tryRecordedQuestion(backend, "wf-1", "What is MCP?")).toBe("ran");
-    expect(ran).toHaveBeenCalledTimes(1);
-  });
-
   it("does nothing without a Run button or a recording", () => {
     const backend = { armRecordedInput: vi.fn(() => null) };
     document.body.innerHTML = open("wf-1");

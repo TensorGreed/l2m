@@ -221,7 +221,7 @@ import { AUXILIARY_HANDLES, CHAT_MODEL_NODE_TYPES, validateConnection } from "./
 import { agentModelPeers, applyModelToPeers } from "./lib/agent-models";
 import { BreakGlassBanner } from "./components/BreakGlassBanner";
 import { RunInputPopover } from "./components/RunInputPopover";
-import { EMPTY_RUN_INPUT, loadRunInput, runInputPayload, runNeedsPrompt, saveRunInput, triggerSamplePrompt, type RunInput } from "./lib/run-input";
+import { EMPTY_RUN_INPUT, loadRunInput, RUN_ASKS_FOR_INPUT, runInputPayload, runNeedsPrompt, saveRunInput, triggerSamplePrompt, type RunInput } from "./lib/run-input";
 import { BreakGlassConfirmCard } from "./components/BreakGlassConfirmCard";
 import { breakGlassLinkFromHash, stripBreakGlassFragment, type BreakGlassLink } from "./lib/break-glass";
 
@@ -5580,7 +5580,7 @@ function StudioApp() {
           }
           onRun={() => {
             // A workflow that has nothing to work on without a prompt asks for one first.
-            if (!runInput.prompt.trim() && runNeedsPrompt(promptNodes)) {
+            if (RUN_ASKS_FOR_INPUT && !runInput.prompt.trim() && runNeedsPrompt(promptNodes)) {
               setRunInputAsked(true);
               setRunInputOpen(true);
               return;
