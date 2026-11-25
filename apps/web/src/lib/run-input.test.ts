@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { loadRunInput, runInputFields, runInputPayload, runNeedsPrompt, saveRunInput } from "./run-input";
+import fs from "node:fs";
+import path from "node:path";
+import { loadRunInput, runInputFields, runInputPayload, runNeedsPrompt, saveRunInput, triggerSamplePrompt } from "./run-input";
 
 afterEach(() => {
   window.localStorage.clear();
@@ -48,5 +50,27 @@ describe("when Run asks for the input first", () => {
     expect(runNeedsPrompt([{ type: "manual_trigger", config: {} }, { type: "agent_orchestrator", config: { userPromptTemplate: "{{question}}" } }])).toBe(false);
     expect(runNeedsPrompt([{ type: "text_input", config: { text: "hello" } }, { type: "llm_call", config: {} }])).toBe(false);
     expect(runNeedsPrompt([{ type: "manual_trigger", config: {} }, { type: "llm_call", config: {} }])).toBe(false);
+  });
+
+  it("runs straight away when the Manual Trigger's test data supplies the prompt (a template's sample input)", () => {
+    const agent = { type: "agent_orchestrator", config: { userPromptTemplate: "{{user_prompt}}" } };
+    const trigger = (testData: unknown) => ({ type: "manual_trigger", config: { testData } });
+    expect(triggerSamplePrompt([trigger({ user_prompt: "What time is it?" }), agent])).toBe("What time is it?");
+    expect(runNeedsPrompt([trigger({ user_prompt: "What time is it?" }), agent])).toBe(false);
+    // Test data typed as JSON text counts too; an empty or missing prompt does not.
+    expect(runNeedsPrompt([trigger('{"user_prompt":"hi"}'), agent])).toBe(false);
+    expect(runNeedsPrompt([trigger({ user_prompt: "  " }), agent])).toBe(true);
+    expect(runNeedsPrompt([trigger({ other: "x" }), agent])).toBe(true);
+    expect(runNeedsPrompt([trigger("{not json"), agent])).toBe(true);
+  });
+
+  it("the featured templates that run without setup run on the first click", () => {
+    const samples = path.resolve(__dirname, "../../../../samples/workflows");
+    for (const file of ["mcp-agent-quickstart-flow.json", "supervisor-worker-swarm-flow.json"]) {
+      const exported = JSON.parse(fs.readFileSync(path.join(samples, file), "utf8")) as { workflow: { nodes: Array<{ type: string; config?: unknown }> } };
+      const nodes = exported.workflow.nodes.map((node) => ({ type: node.type, config: node.config }));
+      expect(runNeedsPrompt(nodes), file).toBe(false);
+      expect(triggerSamplePrompt(nodes), file).toBeTruthy();
+    }
   });
 });

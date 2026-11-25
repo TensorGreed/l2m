@@ -174,7 +174,9 @@ empty. It is remembered for each workflow in your browser. It shows only when th
 
 A Text Input or User Prompt node with text keeps the Input out, so the node's text is used, and a System Prompt node
 with text does the same for the system prompt. When a workflow has nothing to work on without a prompt (an agent on
-`{{user_prompt}}` behind a Manual Trigger, say) and Input is empty, Run opens Input first.
+`{{user_prompt}}` behind a Manual Trigger, say) and Input is empty, Run opens Input first. A Manual Trigger whose
+**Test Data** has a `user_prompt` supplies it instead: Input shows it as `sample: …` and Run runs straight away. The
+built-in agent templates ship their sample prompt this way.
 
 An LLM Call (or chat model node, or Basic LLM Chain) sends its **Prompt** field, rendered against its input. With the
 Prompt empty it sends the input's `prompt`, `user_prompt`, `message`, `text` or `question`, else what its one parent

@@ -13,7 +13,7 @@
         "type": "manual_trigger",
         "name": "Manual Trigger",
         "position": { "x": 80, "y": 240 },
-        "config": { "label": "Run swarm" }
+        "config": { "label": "Run swarm", "testData": { "user_prompt": "What is MCP, and what is 17 * 23?" } }
       },
       {
         "id": "supervisor_1",

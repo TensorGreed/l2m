@@ -71,14 +71,37 @@ function config(node: RunPromptNode): Record<string, unknown> {
 const OWN_INPUT_TRIGGERS = new Set(["webhook_input", "form_trigger", "mcp_server_trigger", "a2a_trigger", "schedule_trigger"]);
 
 /**
+ * The prompt a Manual Trigger's own test data supplies (`testData.user_prompt`), which a Run with an empty Input uses:
+ * a template ships its sample input this way, so it runs on the first click. Undefined when there is none.
+ */
+export function triggerSamplePrompt(nodes: ReadonlyArray<RunPromptNode>): string | undefined {
+  for (const node of nodes) {
+    if (node.type !== "manual_trigger") continue;
+    let testData = config(node).testData;
+    if (typeof testData === "string") {
+      try {
+        testData = JSON.parse(testData);
+      } catch {
+        continue;
+      }
+    }
+    if (!testData || typeof testData !== "object" || Array.isArray(testData)) continue;
+    const prompt = (testData as Record<string, unknown>).user_prompt;
+    if (typeof prompt === "string" && prompt.trim()) return prompt;
+  }
+  return undefined;
+}
+
+/**
  * Whether a Run with an empty prompt would leave the workflow with nothing to work on, so Run asks for the input
  * first: the workflow reads the run's prompt as its main input (an agent whose prompt is `{{user_prompt}}`, an empty
  * User Prompt or Text Input node, a Prompt Template on `{{user_prompt}}`, a Chat Trigger) and no trigger brings content
- * of its own. A workflow that also works without it runs straight away.
+ * of its own (a Manual Trigger's test data counts). A workflow that also works without it runs straight away.
  */
 export function runNeedsPrompt(nodes: ReadonlyArray<RunPromptNode>): boolean {
   if (!runInputFields(nodes).prompt) return false;
   if (nodes.some((node) => OWN_INPUT_TRIGGERS.has(node.type))) return false;
+  if (triggerSamplePrompt(nodes) !== undefined) return false;
   return nodes.some((node) => {
     const own = config(node);
     switch (node.type) {

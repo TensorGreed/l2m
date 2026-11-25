@@ -19,6 +19,14 @@ describe("RunInputPopover", () => {
     expect(container.firstChild).toBeNull();
   });
 
+  it("shows the Manual Trigger's sample prompt while the input is empty", () => {
+    render(
+      <RunInputPopover value={empty} onChange={vi.fn()} fields={{ prompt: true, systemPrompt: false }} open onOpenChange={vi.fn()} onRun={vi.fn()} samplePrompt="What time is it?" />
+    );
+    expect(screen.getByTestId("run-input-preview")).toHaveTextContent("sample: What time is it?");
+    expect(screen.getByTestId("run-input-prompt")).toHaveAttribute("placeholder", expect.stringContaining("What time is it?"));
+  });
+
   it("shows the input next to Run, 'none' while empty", () => {
     render(<RunInputPopover value={empty} onChange={vi.fn()} fields={{ prompt: true, systemPrompt: false }} open={false} onOpenChange={vi.fn()} onRun={vi.fn()} />);
     expect(screen.getByTestId("run-input-toggle").textContent).toContain("none");

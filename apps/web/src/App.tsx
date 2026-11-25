@@ -221,7 +221,7 @@ import { AUXILIARY_HANDLES, CHAT_MODEL_NODE_TYPES, validateConnection } from "./
 import { agentModelPeers, applyModelToPeers } from "./lib/agent-models";
 import { BreakGlassBanner } from "./components/BreakGlassBanner";
 import { RunInputPopover } from "./components/RunInputPopover";
-import { EMPTY_RUN_INPUT, loadRunInput, runInputPayload, runNeedsPrompt, saveRunInput, type RunInput } from "./lib/run-input";
+import { EMPTY_RUN_INPUT, loadRunInput, runInputPayload, runNeedsPrompt, saveRunInput, triggerSamplePrompt, type RunInput } from "./lib/run-input";
 import { BreakGlassConfirmCard } from "./components/BreakGlassConfirmCard";
 import { breakGlassLinkFromHash, stripBreakGlassFragment, type BreakGlassLink } from "./lib/break-glass";
 
@@ -5598,6 +5598,7 @@ function StudioApp() {
                 if (!open) setRunInputAsked(false);
               }}
               asked={runInputAsked}
+              samplePrompt={triggerSamplePrompt(promptNodes)}
               busy={busy}
               runDisabledReason={runDisabledReason}
               onRun={() => {
