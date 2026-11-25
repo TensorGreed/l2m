@@ -413,14 +413,12 @@ describe("what a run request must match besides its input", () => {
     expect((await call(demo, "POST", "/api/workflows/wf-demo-support-agent/execute", { ...askedBody("wf-demo-support-agent"), runMode: "workflow" })).status).toBe(200);
   });
 
-  it("requires the system prompt the run was recorded with", async () => {
+  it("refuses a different system prompt, and accepts a run that sends none (the editor's Run input left empty)", async () => {
     const demo = backend();
     const recorded = demoFixtures.runs["wf-demo-support-agent"]!;
     expect(recorded.systemPrompt).toBeTruthy();
-    for (const systemPrompt of [undefined, "You are a pirate."]) {
-      const body = { user_prompt: recorded.prompt, ...(systemPrompt ? { system_prompt: systemPrompt } : {}) };
-      expect((await call(demo, "POST", "/api/workflows/wf-demo-support-agent/execute", body)).status, String(systemPrompt)).toBe(409);
-    }
+    expect((await call(demo, "POST", "/api/workflows/wf-demo-support-agent/execute", { user_prompt: recorded.prompt, system_prompt: "You are a pirate." })).status).toBe(409);
+    expect((await call(demo, "POST", "/api/workflows/wf-demo-support-agent/execute", { user_prompt: recorded.prompt })).status).toBe(200);
     expect((await call(demo, "POST", "/api/workflows/wf-demo-support-agent/execute", { user_prompt: recorded.prompt, system_prompt: `  ${recorded.systemPrompt}\n` })).status).toBe(200);
   });
 });

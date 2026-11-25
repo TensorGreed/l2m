@@ -304,6 +304,8 @@ const baseNodeDefinitions: NodeDefinition[] = [
       properties: {
         provider: { type: "object" },
         promptKey: { type: "string" },
+        /** The prompt sent to the model, as a template; empty: the input's prompt, message or text, else its content. */
+        promptTemplate: { type: "string" },
         systemPromptKey: { type: "string" },
         /** Phase 10.5 — a registry server prompt fetched at run time as the system or user prompt. */
         serverPrompt: {
@@ -321,6 +323,7 @@ const baseNodeDefinitions: NodeDefinition[] = [
     sampleConfig: {
       provider: { providerId: "echo", model: "echo" },
       promptKey: "prompt",
+      promptTemplate: "",
       systemPromptKey: "system_prompt"
     }
   },
@@ -338,6 +341,8 @@ const baseNodeDefinitions: NodeDefinition[] = [
         temperature: { type: "number" },
         maxTokens: { type: "number" },
         promptKey: { type: "string" },
+        /** The prompt sent to the model, as a template; empty: the input's prompt, message or text, else its content. */
+        promptTemplate: { type: "string" },
         systemPromptKey: { type: "string" }
       },
       required: ["model"]
@@ -347,6 +352,7 @@ const baseNodeDefinitions: NodeDefinition[] = [
       temperature: 0.2,
       maxTokens: 1024,
       promptKey: "prompt",
+      promptTemplate: "",
       systemPromptKey: "system_prompt"
     }
   },
@@ -364,6 +370,8 @@ const baseNodeDefinitions: NodeDefinition[] = [
         temperature: { type: "number" },
         maxTokens: { type: "number" },
         promptKey: { type: "string" },
+        /** The prompt sent to the model, as a template; empty: the input's prompt, message or text, else its content. */
+        promptTemplate: { type: "string" },
         systemPromptKey: { type: "string" }
       },
       required: ["model"]
@@ -372,6 +380,7 @@ const baseNodeDefinitions: NodeDefinition[] = [
       model: "claude-sonnet-5-5",
       maxTokens: 1024,
       promptKey: "prompt",
+      promptTemplate: "",
       systemPromptKey: "system_prompt"
     }
   },
@@ -388,6 +397,8 @@ const baseNodeDefinitions: NodeDefinition[] = [
         temperature: { type: "number" },
         maxTokens: { type: "number" },
         promptKey: { type: "string" },
+        /** The prompt sent to the model, as a template; empty: the input's prompt, message or text, else its content. */
+        promptTemplate: { type: "string" },
         systemPromptKey: { type: "string" }
       },
       required: ["model"]
@@ -398,6 +409,7 @@ const baseNodeDefinitions: NodeDefinition[] = [
       temperature: 0.2,
       maxTokens: 1024,
       promptKey: "prompt",
+      promptTemplate: "",
       systemPromptKey: "system_prompt"
     }
   },
@@ -415,6 +427,8 @@ const baseNodeDefinitions: NodeDefinition[] = [
         temperature: { type: "number" },
         maxTokens: { type: "number" },
         promptKey: { type: "string" },
+        /** The prompt sent to the model, as a template; empty: the input's prompt, message or text, else its content. */
+        promptTemplate: { type: "string" },
         systemPromptKey: { type: "string" }
       },
       required: ["baseUrl", "model"]
@@ -425,6 +439,7 @@ const baseNodeDefinitions: NodeDefinition[] = [
       temperature: 0.2,
       maxTokens: 1024,
       promptKey: "prompt",
+      promptTemplate: "",
       systemPromptKey: "system_prompt"
     }
   },
@@ -445,6 +460,8 @@ const baseNodeDefinitions: NodeDefinition[] = [
         enableThinking: { type: "boolean" },
         thinkingTokens: { type: "number" },
         promptKey: { type: "string" },
+        /** The prompt sent to the model, as a template; empty: the input's prompt, message or text, else its content. */
+        promptTemplate: { type: "string" },
         systemPromptKey: { type: "string" }
       },
       required: ["apiProvider", "baseUrl", "model"]
@@ -458,6 +475,7 @@ const baseNodeDefinitions: NodeDefinition[] = [
       enableThinking: false,
       thinkingTokens: 1024,
       promptKey: "prompt",
+      promptTemplate: "",
       systemPromptKey: "system_prompt"
     }
   },
@@ -476,6 +494,8 @@ const baseNodeDefinitions: NodeDefinition[] = [
         temperature: { type: "number" },
         maxTokens: { type: "number" },
         promptKey: { type: "string" },
+        /** The prompt sent to the model, as a template; empty: the input's prompt, message or text, else its content. */
+        promptTemplate: { type: "string" },
         systemPromptKey: { type: "string" }
       },
       required: ["endpoint", "deployment", "secretRef"]
@@ -487,6 +507,7 @@ const baseNodeDefinitions: NodeDefinition[] = [
       temperature: 0.2,
       maxTokens: 1024,
       promptKey: "prompt",
+      promptTemplate: "",
       systemPromptKey: "system_prompt"
     }
   },
@@ -503,6 +524,8 @@ const baseNodeDefinitions: NodeDefinition[] = [
         temperature: { type: "number" },
         maxTokens: { type: "number" },
         promptKey: { type: "string" },
+        /** The prompt sent to the model, as a template; empty: the input's prompt, message or text, else its content. */
+        promptTemplate: { type: "string" },
         systemPromptKey: { type: "string" }
       },
       required: ["model"]
@@ -512,6 +535,7 @@ const baseNodeDefinitions: NodeDefinition[] = [
       temperature: 0.2,
       maxTokens: 1024,
       promptKey: "prompt",
+      promptTemplate: "",
       systemPromptKey: "system_prompt"
     }
   },
@@ -780,7 +804,7 @@ const baseNodeDefinitions: NodeDefinition[] = [
     type: "mcp_tool",
     label: "MCP Tool",
     category: "MCP",
-    description: "Directly invokes an MCP tool outside the agent loop.",
+    description: "Uses an MCP server's tools: on an agent's tool port the agent picks which to call; as a step it calls one tool directly.",
     configSchema: {
       type: "object",
       properties: {
@@ -1467,12 +1491,15 @@ const baseNodeDefinitions: NodeDefinition[] = [
       type: "object",
       properties: {
         promptKey: { type: "string" },
+        /** The prompt sent to the model, as a template; empty: the input's prompt, message or text, else its content. */
+        promptTemplate: { type: "string" },
         systemPromptKey: { type: "string" },
         outputFormat: { type: "string", enum: ["text", "json"] }
       }
     },
     sampleConfig: {
       promptKey: "prompt",
+      promptTemplate: "",
       systemPromptKey: "system_prompt",
       outputFormat: "text"
     }

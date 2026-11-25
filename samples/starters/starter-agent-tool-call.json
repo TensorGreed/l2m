@@ -1,0 +1,122 @@
+{
+  "schemaVersion": "1.0.0",
+  "workflowVersion": 1,
+  "workflow": {
+    "id": "starter-agent-tool-call",
+    "name": "Agent that calls a tool",
+    "description": "An AI agent with a read-only tool that lists the sample shop's orders. Runs with no key on the built-in Echo test model, which makes one demo tool call so you can see the agent loop; pick a real model on Chat Model to let the agent choose its tools. Change the question on Question.",
+    "schemaVersion": "1.0.0",
+    "workflowVersion": 1,
+    "nodes": [
+      {
+        "id": "question",
+        "type": "user_prompt",
+        "name": "Question",
+        "position": { "x": 80, "y": 200 },
+        "config": { "text": "Which orders are still pending?" }
+      },
+      {
+        "id": "agent",
+        "type": "agent_orchestrator",
+        "name": "Agent",
+        "position": { "x": 400, "y": 200 },
+        "config": {
+          "systemPromptTemplate": "You answer questions about the shop's orders. Call list_orders to see them; never guess.",
+          "userPromptTemplate": "{{user_prompt}}",
+          "maxIterations": 4,
+          "toolCallingEnabled": true
+        }
+      },
+      {
+        "id": "model",
+        "type": "llm_call",
+        "name": "Chat Model",
+        "position": { "x": 340, "y": 400 },
+        "config": {
+          "provider": { "providerId": "echo", "model": "echo" },
+          "promptKey": "prompt",
+          "systemPromptKey": "system_prompt"
+        }
+      },
+      {
+        "id": "orders_tool",
+        "type": "workflow_tool",
+        "name": "List orders",
+        "position": { "x": 520, "y": 400 },
+        "config": {
+          "workflowId": "starter-agent-tool-call-orders",
+          "toolName": "list_orders",
+          "toolDescription": "Lists the shop's orders (id, customer, status, total). Read-only."
+        }
+      },
+      {
+        "id": "answer",
+        "type": "output",
+        "name": "Answer",
+        "position": { "x": 720, "y": 200 },
+        "config": { "responseTemplate": "{{answer}}", "outputKey": "result" }
+      }
+    ],
+    "edges": [
+      { "id": "e_question_agent", "source": "question", "target": "agent" },
+      { "id": "e_agent_answer", "source": "agent", "target": "answer" },
+      { "id": "e_agent_model", "source": "agent", "sourceHandle": "chat_model", "target": "model" },
+      { "id": "e_agent_tool", "source": "agent", "sourceHandle": "tool", "target": "orders_tool" }
+    ]
+  },
+  "exportedAt": "2026-11-24T00:00:00.000Z",
+  "companions": [
+    {
+      "schemaVersion": "1.0.0",
+      "workflowVersion": 1,
+      "workflow": {
+        "id": "starter-agent-tool-call-orders",
+        "name": "List orders (agent tool)",
+        "description": "A read-only tool for the \"Agent that calls a tool\" starter: fetches the built-in sample orders. Its trigger declares it read-only, so an agent's Echo test model may call it.",
+        "schemaVersion": "1.0.0",
+        "workflowVersion": 1,
+        "nodes": [
+          {
+            "id": "start",
+            "type": "sub_workflow_trigger",
+            "name": "Called by the agent",
+            "position": { "x": 80, "y": 200 },
+            "config": {
+              "description": "Lists the shop's orders.",
+              "inputSchema": {
+                "type": "object",
+                "properties": { "status": { "type": "string", "description": "Optional: only orders with this status (paid, pending or refunded)." } }
+              },
+              "readOnly": true
+            }
+          },
+          {
+            "id": "fetch",
+            "type": "http_request",
+            "name": "Fetch orders",
+            "position": { "x": 360, "y": 200 },
+            "config": {
+              "method": "GET",
+              "urlTemplate": "$L2M_API_BASE/api/sample-data/orders",
+              "headersTemplate": "{\n  \"Accept\": \"application/json\"\n}",
+              "responseType": "json",
+              "timeoutMs": 15000,
+              "failOnHttpError": true
+            }
+          },
+          {
+            "id": "out",
+            "type": "output",
+            "name": "Orders",
+            "position": { "x": 640, "y": 200 },
+            "config": { "responseTemplate": "{{body.orders}}", "outputKey": "orders" }
+          }
+        ],
+        "edges": [
+          { "id": "e_start_fetch", "source": "start", "target": "fetch" },
+          { "id": "e_fetch_out", "source": "fetch", "target": "out" }
+        ]
+      }
+    }
+  ]
+}

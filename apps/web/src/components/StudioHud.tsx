@@ -42,6 +42,8 @@ export interface StudioHudProps {
   releaseControl?: ReactNode;
   /** Primary "Run" action; rendered in editor mode only. */
   onRun?: () => void;
+  /** The Run input control (the prompt a Run sends), rendered just before Run in editor mode. */
+  runInput?: ReactNode;
   /** Why Save is off for you (your role or your access to this workflow); Save is disabled with this as its tooltip. */
   saveDisabledReason?: string | null;
   /** Why Run is off for you; Run is disabled with this as its tooltip. */
@@ -128,6 +130,7 @@ export function StudioHud({
   runStatus,
   releaseControl,
   onRun,
+  runInput,
   isDirty = false,
   onShare,
   noWriteTools = false,
@@ -663,6 +666,7 @@ export function StudioHud({
           </div>
         )}
 
+        {isEditor && onRun && runInput}
         {isEditor && onRun && (
           <button
             type="button"

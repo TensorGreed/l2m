@@ -93,15 +93,15 @@ test.afterAll(async () => {
   expect(ollamaAttempts, "the studio tried to reach a local Ollama").toEqual([]);
 });
 
-test("the gallery shows ten starters, and the filter keeps only templates that run without setup", async () => {
+test("the gallery shows eleven starters, and the filter keeps only templates that run without setup", async () => {
   await sidebarItem("Templates").click();
   const filter = page.getByRole("button", { name: "Runs without setup" });
   await expect(filter).toHaveAttribute("aria-pressed", "false");
   await page.screenshot({ path: path.join(SHOT_DIR, "after-01-gallery.png") });
 
   await page.getByRole("button", { name: "Starters", exact: true }).click();
-  await expect(page.locator(".tpl-card")).toHaveCount(10);
-  await expect(page.locator(".tpl-card .tpl-dep-pill-none")).toHaveCount(10);
+  await expect(page.locator(".tpl-card")).toHaveCount(11);
+  await expect(page.locator(".tpl-card .tpl-dep-pill-none")).toHaveCount(11);
   await page.screenshot({ path: path.join(SHOT_DIR, "after-02-starters.png"), fullPage: true });
 
   await page.getByRole("button", { name: "All", exact: true }).click();
@@ -109,7 +109,7 @@ test("the gallery shows ten starters, and the filter keeps only templates that r
   await expect(filter).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".tpl-card").first()).toBeVisible();
   const shown = await page.locator(".tpl-card").count();
-  expect(shown).toBeGreaterThanOrEqual(10);
+  expect(shown).toBeGreaterThanOrEqual(11);
   await expect(page.locator(".tpl-card .tpl-dep-pill-none")).toHaveCount(shown);
   await expect(page.locator(".tpl-card [data-testid^='tpl-needs-model-']")).toHaveCount(0);
   await page.screenshot({ path: path.join(SHOT_DIR, "after-03-runs-without-setup.png"), fullPage: true });

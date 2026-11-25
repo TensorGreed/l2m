@@ -55,7 +55,7 @@ class ToolCallingModel implements LLMProviderAdapter {
   }
 }
 
-const model = (id: string, name: string) => node(id, "llm_call", { provider: { providerId: "metered", model: name }, userPromptTemplate: "hi" });
+const model = (id: string, name: string) => node(id, "llm_call", { provider: { providerId: "metered", model: name }, promptTemplate: "hi" });
 
 function child(id: string, extra: WorkflowNode[] = []): Workflow {
   return chainWorkflow(id, [node("start", "sub_workflow_trigger"), model("model", id), ...extra, node("out", "output")]);

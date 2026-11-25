@@ -75,6 +75,23 @@ const DEFAULT_USER_PROMPT_TEMPLATES: Readonly<Record<string, (config: Record<str
   a2a_agent: (config) => typeof config.messageTemplate !== "string" || !config.messageTemplate.trim()
 };
 
+/** LLM nodes with a Prompt (`promptTemplate`) of their own: they read the run's prompt only when that Prompt names it. */
+const OWN_PROMPT_TYPES: ReadonlySet<string> = new Set([
+  "llm_call",
+  "openai_chat_model",
+  "anthropic_chat_model",
+  "ollama_chat_model",
+  "openai_compatible_chat_model",
+  "ai_gateway_chat_model",
+  "azure_openai_chat_model",
+  "google_gemini_chat_model",
+  "basic_llm_chain"
+]);
+
+function hasOwnPrompt(type: string, config: Record<string, unknown>): boolean {
+  return OWN_PROMPT_TYPES.has(type) && typeof config.promptTemplate === "string" && config.promptTemplate.trim().length > 0;
+}
+
 const MAX_SCAN_DEPTH = 12;
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -105,7 +122,7 @@ export function runPromptReads(nodes: ReadonlyArray<RunPromptNode>): RunPromptRe
     const config = asRecord(node.config);
     if (!userPrompt) {
       userPrompt =
-        IMPLICIT_USER_PROMPT_READERS.has(node.type) ||
+        (IMPLICIT_USER_PROMPT_READERS.has(node.type) && !hasOwnPrompt(node.type, config)) ||
         DEFAULT_USER_PROMPT_TEMPLATES[node.type]?.(config) === true ||
         mentions(config, "user_prompt") ||
         mapsFrom(config, "user_prompt");

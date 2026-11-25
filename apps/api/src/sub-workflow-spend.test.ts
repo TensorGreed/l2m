@@ -23,7 +23,7 @@ function modelChild(id: string, projectId = "default"): Workflow {
     projectId,
     nodes: [
       testNode("start", "sub_workflow_trigger"),
-      testNode("model", "llm_call", { provider: { providerId: "echo", model: "echo-1" }, userPromptTemplate: "Summarise the order history of a customer in a few words" }),
+      testNode("model", "llm_call", { provider: { providerId: "echo", model: "echo-1" }, promptTemplate: "Summarise the order history of a customer in a few words" }),
       testNode("out", "output")
     ],
     edges: [

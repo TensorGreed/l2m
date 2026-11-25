@@ -365,6 +365,40 @@ function writeGateClassification(
 }
 
 /**
+ * The agent's tools that L2M itself classifies read-only, by the write gate's strict rule: an admin marked the tool
+ * read-only, or it is a built-in tool, or a workflow tool whose own trigger declares it read-only. A server's
+ * `readOnlyHint` alone does not count, and a tool the tool policy blocks is left out. The built-in Echo test model may
+ * make its one demo tool call only to one of these.
+ */
+function agentReadOnlyToolNames(
+  resolved: ReadonlyArray<{
+    serverId: string;
+    registryServerId?: string;
+    originalName: string;
+    exposedName: string;
+    annotations?: McpToolAnnotations;
+    connection?: unknown;
+    serverLabel?: string;
+  }>,
+  toolPolicy: RunToolPolicy | undefined,
+  registry: MCPRegistry
+): string[] {
+  return resolved
+    .filter((entry) => {
+      const decision = toolPolicy?.evaluate({
+        adapterId: entry.serverId,
+        ...(entry.registryServerId ? { registryServerId: entry.registryServerId } : {}),
+        toolName: entry.originalName,
+        ...(entry.annotations ? { annotations: entry.annotations } : {})
+      });
+      if (decision && !decision.allowed) return false;
+      const classification = writeGateClassification(entry, decision ? decision.classification : classifyMcpTool({ annotations: entry.annotations }), registry);
+      return classification.source === "manual" && classification.readOnly;
+    })
+    .map((entry) => entry.exposedName);
+}
+
+/**
  * Phase 6.4 — the parent's write controls reach a workflow tool's child run, tighten-only: the parent's write-tool
  * gate when the child has none of its own, and the parent's "no write tools" switch.
  */
@@ -3785,6 +3819,86 @@ function promptRead(templateData: Record<string, unknown>, keys: readonly string
   return fallback;
 }
 
+/** The input fields an LLM node without a Prompt of its own reads its prompt from, after its prompt key. */
+const LLM_INPUT_PROMPT_FIELDS = ["user_prompt", "message", "text", "question"] as const;
+
+/** A trigger's own fields about the run (when and how it fired, its session), which are not content to send a model. */
+const LLM_INPUT_SKIPPED_KEYS = new Set(["triggered", "trigger_type", "input_trigger_type", "label", "firedAt", "submittedAt", "callId", "toolName", "execution_custom_data", "session_id"]);
+
+function promptTextOf(value: unknown): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === "string") return value.trim() ? value : undefined;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return undefined;
+}
+
+/** A value with something in it: not empty text, an empty list or an object with no fields. */
+function hasContent(value: unknown): boolean {
+  if (value === undefined || value === null) return false;
+  if (typeof value === "string") return value.trim().length > 0;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === "object") return Object.values(value as Record<string, unknown>).some(hasContent);
+  return true;
+}
+
+/** A parent's output as prompt text: its text, or its fields as JSON (internal `_` fields left out); undefined when empty. */
+function parentOutputPromptText(output: unknown): string | undefined {
+  const scalar = promptTextOf(output);
+  if (scalar !== undefined) return scalar;
+  if (Array.isArray(output)) return output.length > 0 ? JSON.stringify(output, null, 2) : undefined;
+  if (!output || typeof output !== "object") return undefined;
+  const fields = Object.fromEntries(
+    Object.entries(output as Record<string, unknown>).filter(([key, value]) => !key.startsWith("_") && !LLM_INPUT_SKIPPED_KEYS.has(key) && hasContent(value))
+  );
+  return Object.keys(fields).length > 0 ? JSON.stringify(fields, null, 2) : undefined;
+}
+
+/**
+ * The user prompt of an LLM node (LLM Call, the chat model nodes, Basic LLM Chain), as prompt parts:
+ * - its own Prompt (`promptTemplate`) when it has one, rendered against its input;
+ * - else the first input field with text: its prompt key (`prompt`, what a Prompt Template node writes), the run's
+ *   `user_prompt`, then `message`, `text` or `question` (a chat message, a webhook's usual fields);
+ * - else what its one parent sent (a webhook's body, say), as text or JSON.
+ * Empty when none of these has text; the caller fails the node then, rather than send the model an empty message.
+ */
+function llmUserPromptParts(
+  config: Record<string, unknown>,
+  templateData: Record<string, unknown>,
+  context: NodeRuntimeContext,
+  promptKey: string
+): PromptPart[] {
+  const template = typeof config.promptTemplate === "string" ? config.promptTemplate : "";
+  if (template.trim()) {
+    const pieces: TemplatePiece[] = [];
+    renderTemplate(template, templateData, { pieces });
+    return pieces
+      .filter((piece) => piece.text.length > 0)
+      .map((piece): PromptPart => (piece.body === undefined ? piece.text : { text: piece.text, path: piece.body, simplePath: piece.simplePath }));
+  }
+  for (const key of [promptKey, ...LLM_INPUT_PROMPT_FIELDS]) {
+    const raw = readData(templateData, key);
+    const text = promptTextOf(raw) ?? (raw && typeof raw === "object" ? parentOutputPromptText(raw) : undefined);
+    if (text !== undefined) return [{ text, path: key }];
+  }
+  const parents = Object.entries(context.parentOutputs)
+    .map(([parentId, output]) => ({ parentId, text: parentOutputPromptText(output) }))
+    .filter((entry): entry is { parentId: string; text: string } => entry.text !== undefined);
+  if (parents.length === 1) {
+    const [{ parentId, text }] = parents;
+    return [{ text, path: `parent_outputs.${parentId}` }];
+  }
+  return [];
+}
+
+/** Fails an LLM node whose prompt came out empty: a model sent an empty message answers nothing useful. */
+function assertLlmUserPrompt(node: WorkflowNode, userPrompt: string): void {
+  if (userPrompt.trim()) return;
+  throw WorkflowError.nodeConfig(
+    `${node.name || node.type} has no prompt to send: its Prompt field is empty and its input has no prompt, message or text. ` +
+      "Fix: write a Prompt on the node (for example Summarize: {{text}}), connect a node that sends text, or type a prompt under Run input next to Run."
+  );
+}
+
 /** Phase 12 coverage — what splits a node's prompt reads into pieces; absent without label provenance. */
 function boundarySources(context: NodeRuntimeContext): PieceSources | undefined {
   if (!context.labelScope) return undefined;
@@ -5649,7 +5763,7 @@ async function executeNodeHandler(
       const provider = config.provider as LLMProviderConfig;
       const promptKey = typeof config.promptKey === "string" ? config.promptKey : "prompt";
       const systemPromptKey = typeof config.systemPromptKey === "string" ? config.systemPromptKey : "system_prompt";
-      const userPart = promptRead(templateData, [promptKey, "user_prompt"]);
+      const userParts = llmUserPromptParts(config, templateData, context, promptKey);
       const systemPart = promptRead(templateData, [systemPromptKey]);
       const prompts = await applyServerPromptToLlmNode({
         node,
@@ -5657,9 +5771,10 @@ async function executeNodeHandler(
         templateData,
         context,
         dependencies,
-        userPrompt: joinPromptParts([userPart]),
+        userPrompt: joinPromptParts(userParts),
         systemPrompt: joinPromptParts([systemPart])
       });
+      assertLlmUserPrompt(node, prompts.userPrompt);
       const output = await runLlmNode({
         outbound: { node, context },
         nodeId: node.id,
@@ -5667,7 +5782,7 @@ async function executeNodeHandler(
         userPrompt: prompts.userPrompt,
         systemPrompt: prompts.systemPrompt,
         dependencies,
-        boundary: { user: [userPart], system: [systemPart], ...(prompts.trace ? { serverPrompt: prompts.trace.target } : {}) }
+        boundary: { user: userParts, system: [systemPart], ...(prompts.trace ? { serverPrompt: prompts.trace.target } : {}) }
       });
       return prompts.trace ? { ...output, _serverPrompt: prompts.trace } : output;
     }
@@ -5685,7 +5800,7 @@ async function executeNodeHandler(
 
       const promptKey = typeof config.promptKey === "string" ? config.promptKey : "prompt";
       const systemPromptKey = typeof config.systemPromptKey === "string" ? config.systemPromptKey : "system_prompt";
-      const userPart = promptRead(templateData, [promptKey, "user_prompt"]);
+      const userParts = llmUserPromptParts(config, templateData, context, promptKey);
       const systemPart = promptRead(templateData, [systemPromptKey]);
       const prompts = await applyServerPromptToLlmNode({
         node,
@@ -5693,9 +5808,10 @@ async function executeNodeHandler(
         templateData,
         context,
         dependencies,
-        userPrompt: joinPromptParts([userPart]),
+        userPrompt: joinPromptParts(userParts),
         systemPrompt: joinPromptParts([systemPart])
       });
+      assertLlmUserPrompt(node, prompts.userPrompt);
       const output = await runLlmNode({
         outbound: { node, context },
         nodeId: node.id,
@@ -5703,7 +5819,7 @@ async function executeNodeHandler(
         userPrompt: prompts.userPrompt,
         systemPrompt: prompts.systemPrompt,
         dependencies,
-        boundary: { user: [userPart], system: [systemPart], ...(prompts.trace ? { serverPrompt: prompts.trace.target } : {}) }
+        boundary: { user: userParts, system: [systemPart], ...(prompts.trace ? { serverPrompt: prompts.trace.target } : {}) }
       });
       return prompts.trace ? { ...output, _serverPrompt: prompts.trace } : output;
     }
@@ -5717,7 +5833,7 @@ async function executeNodeHandler(
 
       const promptKey = typeof config.promptKey === "string" ? config.promptKey : "prompt";
       const systemPromptKey = typeof config.systemPromptKey === "string" ? config.systemPromptKey : "system_prompt";
-      const userPart = promptRead(templateData, [promptKey, "user_prompt"]);
+      const userParts = llmUserPromptParts(config, templateData, context, promptKey);
       const systemPart = promptRead(templateData, [systemPromptKey]);
       const prompts = await applyServerPromptToLlmNode({
         node,
@@ -5725,9 +5841,10 @@ async function executeNodeHandler(
         templateData,
         context,
         dependencies,
-        userPrompt: joinPromptParts([userPart]),
+        userPrompt: joinPromptParts(userParts),
         systemPrompt: joinPromptParts([systemPart])
       });
+      assertLlmUserPrompt(node, prompts.userPrompt);
       const provider: LLMProviderConfig = {
         providerId: "azure_openai",
         model: deployment,
@@ -5751,7 +5868,7 @@ async function executeNodeHandler(
         userPrompt: prompts.userPrompt,
         systemPrompt: prompts.systemPrompt,
         dependencies,
-        boundary: { user: [userPart], system: [systemPart], ...(prompts.trace ? { serverPrompt: prompts.trace.target } : {}) }
+        boundary: { user: userParts, system: [systemPart], ...(prompts.trace ? { serverPrompt: prompts.trace.target } : {}) }
       });
       return prompts.trace ? { ...output, _serverPrompt: prompts.trace } : output;
     }
@@ -5764,10 +5881,11 @@ async function executeNodeHandler(
 
       const promptKey = typeof config.promptKey === "string" ? config.promptKey : "prompt";
       const systemPromptKey = typeof config.systemPromptKey === "string" ? config.systemPromptKey : "system_prompt";
-      const userPart = promptRead(templateData, [promptKey, "user_prompt"]);
+      const userParts = llmUserPromptParts(config, templateData, context, promptKey);
       const systemPart = promptRead(templateData, [systemPromptKey]);
-      const userPrompt = joinPromptParts([userPart]);
+      const userPrompt = joinPromptParts(userParts);
       const systemPrompt = joinPromptParts([systemPart]);
+      assertLlmUserPrompt(node, userPrompt);
       const provider: LLMProviderConfig = {
         providerId: "gemini",
         model,
@@ -5784,7 +5902,7 @@ async function executeNodeHandler(
         systemPrompt,
         dependencies,
         outbound: { node, context },
-        boundary: { user: [userPart], system: [systemPart] }
+        boundary: { user: userParts, system: [systemPart] }
       });
     }
 
@@ -7077,17 +7195,25 @@ async function executeNodeHandler(
       const serverPromptBinding = readServerPromptBinding(config.serverPrompt);
 
       // --- Empty prompt guard ---
+      // An empty rendering falls back to the run's prompt, then a webhook's prompt or message, and the agent is sent
+      // that text (never an empty message). With none of them, the node fails with what to fix.
       if (!userPrompt.trim() && serverPromptBinding?.target !== "user") {
         const webhookData = toRecord(templateData.webhook);
-        const fallbackUserPrompt =
-          (typeof templateData.user_prompt === "string" && templateData.user_prompt.trim()) ||
-          (typeof webhookData.user_prompt === "string" && (webhookData.user_prompt as string).trim()) ||
-          (typeof webhookData.message === "string" && (webhookData.message as string).trim()) ||
-          "";
-        if (!fallbackUserPrompt) {
-          throw WorkflowError.nodeConfig("Agent Orchestrator user prompt is empty after template rendering. Check your template variables or webhook payload.");
-          throw new Error("Agent Orchestrator user prompt is empty after template rendering. Check your template variables or webhook payload.");
+        const fallbackPath = (["user_prompt", "webhook.user_prompt", "webhook.message"] as const).find((path) => {
+          const value = path === "user_prompt" ? templateData.user_prompt : webhookData[path.slice("webhook.".length)];
+          return typeof value === "string" && value.trim().length > 0;
+        });
+        if (!fallbackPath) {
+          throw WorkflowError.nodeConfig(
+            `${node.name || "Agent"} has no prompt: its user prompt is empty after template rendering. ` +
+              "Fix: check the User Prompt template's fields against the input, send a prompt or message with the run, or type one under Run input next to Run."
+          );
         }
+        userPromptPieces.length = 0;
+        const fallbackTemplate = `{{${fallbackPath}}}`;
+        userPrompt = context.labelScope
+          ? context.labelScope.segment(AGENT_USER_PROMPT_SEGMENT, () => renderTemplate(fallbackTemplate, templateData, { pieces: userPromptPieces }))
+          : renderTemplate(fallbackTemplate, templateData, { pieces: userPromptPieces });
       }
       const resolvedSessionId = renderTemplate(sessionTemplate, templateData).trim();
       const sessionId =
@@ -7661,6 +7787,8 @@ async function executeNodeHandler(
               ...workerTools.map(wt => ({ name: wt.name, description: wt.description, inputSchema: wt.inputSchema }))
             ],
             describeUnavailableTool: (toolName) => resolvedTools.describeBlocked(toolName),
+            // The built-in Echo test model's one demo call may only use these (see agentReadOnlyToolNames).
+            ...(String(provider.providerId) === "echo" ? { readOnlyToolNames: agentReadOnlyToolNames(resolvedTools.resolved, toolPolicy, dependencies.mcpRegistry) } : {}),
             // Trace spans: a worker, a workflow tool or a built-in tool runs in process; anything else is an MCP server's.
             toolType: (toolName) => {
               if (workerTools.some((worker) => worker.name === toolName)) return "function";
@@ -8316,9 +8444,10 @@ async function executeNodeHandler(
       if (!provider) throw new Error("Basic LLM Chain requires a provider. Attach a Chat Model node upstream or configure provider in settings.");
       const promptKey = typeof config.promptKey === "string" ? config.promptKey : "prompt";
       const systemPromptKey = typeof config.systemPromptKey === "string" ? config.systemPromptKey : "system_prompt";
-      const userPart = promptRead(templateData, [promptKey, "user_prompt"]);
+      const userParts = llmUserPromptParts(config, templateData, context, promptKey);
       const systemPart = promptRead(templateData, [systemPromptKey], "You are a helpful assistant.");
-      const boundary = { user: [userPart], system: [systemPart] };
+      const boundary = { user: userParts, system: [systemPart] };
+      assertLlmUserPrompt(node, joinPromptParts(boundary.user));
       return runLlmNode({ nodeId: node.id, provider, userPrompt: joinPromptParts(boundary.user), systemPrompt: joinPromptParts(boundary.system), dependencies, outbound: { node, context }, boundary });
     }
 

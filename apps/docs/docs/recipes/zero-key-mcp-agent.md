@@ -22,7 +22,7 @@ related: ["ai-agent","agent-loop","tool-calling","mcp-tool"]
 
 **Needs:** No API key · **Time:** 5 minutes · **Nodes:** 6
 
-A manual trigger starts one Agent Orchestrator node. Its chat model is the built-in echo provider, and its tools come from the mock MCP server that runs inside L2M: `get_current_time` and `calculator`. Nothing needs a key, a network connection or a separate server. Echo is not a real model: it repeats the prompt back and never asks for a tool, so a local run makes one model call and ends. That proves the wiring works. To see the agent call tools, attach a real chat model.
+A manual trigger starts one Agent Orchestrator node. Its chat model is the built-in echo provider, and its tools come from the mock MCP server that runs inside L2M: `get_current_time` and `calculator`. Nothing needs a key, a network connection or a separate server. Echo is not a real model: it repeats the prompt back and cannot choose tools. It makes one demo tool call only to a tool L2M classifies read-only; the sample server's tools are not marked read-only, so a local run makes one model call, says why it called no tool, and ends. That proves the wiring works. To see the agent call tools, attach a real chat model.
 
 <div class="recipe-actions">
   <a class="hub-button" href="/docs/recipes/files/mcp-agent-quickstart-flow.json" download>Download the workflow JSON</a>

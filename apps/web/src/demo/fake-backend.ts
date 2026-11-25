@@ -429,11 +429,12 @@ export function createFakeBackend(options: FakeBackendOptions): FakeBackend {
     if (!recording) return notRecorded(workflow);
     const armedForThis = Boolean(arm && arm.workflowId === workflowId && arm.graphDigest === graphDigest(workflow) && now().getTime() <= arm.expiresAt);
     if (!armedForThis) {
-      // A recording answers its own input only, sent with the system prompt it was recorded with.
+      // A recording answers its own input only (and, when the run sends a system prompt, the one it was recorded with).
       const input = runInputOf(body);
       const systemPrompt = typeof body.system_prompt === "string" ? normalizeRunInput(body.system_prompt) : null;
       const recordedSystemPrompt = recording.run.systemPrompt ? normalizeRunInput(recording.run.systemPrompt) : null;
-      if (input === null || normalizeRunInput(input) !== normalizeRunInput(recording.run.prompt) || systemPrompt !== recordedSystemPrompt) {
+      // The editor sends a system prompt only when someone typed one; a run without one matches any recording.
+      if (input === null || normalizeRunInput(input) !== normalizeRunInput(recording.run.prompt) || (systemPrompt !== null && systemPrompt !== recordedSystemPrompt)) {
         return inputNotRecorded(workflow, recording.run.prompt);
       }
     }

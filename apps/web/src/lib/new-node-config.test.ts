@@ -81,3 +81,14 @@ describe("a Loop body node", () => {
     expect(isDirectLoopBodyNode("loop", nodes, edges)).toBe(false);
   });
 });
+
+describe("an MCP Tool added to an agent", () => {
+  it("starts on all of the server's tools when it is attached to an agent's tool port", () => {
+    const config = newNodeConfig("mcp_tool", sample("mcp_tool"), { attachedAs: "tool" });
+    expect(config.toolName).toBe("__all__");
+    expect(config.argsTemplate).toBeUndefined();
+  });
+  it("keeps the single-tool sample as a step node", () => {
+    expect(newNodeConfig("mcp_tool", sample("mcp_tool")).toolName).toBe("get_current_time");
+  });
+});

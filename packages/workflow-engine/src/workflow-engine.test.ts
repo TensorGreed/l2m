@@ -305,7 +305,9 @@ describe("workflow engine", () => {
     const result = await executeWorkflow(
       {
         workflow,
-        startNodeId: "n3"
+        startNodeId: "n3",
+        // A run from the LLM node has no upstream output: the run input is its prompt.
+        userPrompt: "Say hello"
       },
       {
         providerRegistry: createProviderRegistry(),
@@ -3591,7 +3593,7 @@ describe("Phase 1.7 — Node-Level Error Settings", () => {
         makeNode(
           "n1",
           "llm_call",
-          { provider: { providerId: "counting", model: "m" } },
+          { provider: { providerId: "counting", model: "m" }, promptTemplate: "hello" },
           { retryOnFail: true, maxRetries: 2, retryIntervalMs: 0 }
         ),
         makeNode("nout", "output", { responseTemplate: "{{result}}" })
@@ -3634,7 +3636,7 @@ describe("Phase 1.7 — Node-Level Error Settings", () => {
         makeNode(
           "n1",
           "llm_call",
-          { provider: { providerId: "counting2", model: "m" }, retry: { enabled: false } },
+          { provider: { providerId: "counting2", model: "m" }, promptTemplate: "hello", retry: { enabled: false } },
           { retryOnFail: false }
         ),
         makeNode("nout", "output", { responseTemplate: "{{result}}" })

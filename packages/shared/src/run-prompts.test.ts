@@ -24,6 +24,16 @@ describe("runPromptReads", () => {
     }
   });
 
+  it("does not count an LLM node with a Prompt of its own, unless that Prompt names the run's prompt", () => {
+    for (const type of ["llm_call", "openai_chat_model", "basic_llm_chain"]) {
+      expect(runPromptReads([{ type, config: { promptTemplate: "Triage: {{body.text}}" } }]).userPrompt, type).toBe(false);
+      expect(runPromptReads([{ type, config: { promptTemplate: "  " } }]).userPrompt, type).toBe(true);
+      expect(runPromptReads([{ type, config: { promptTemplate: "Answer: {{user_prompt}}" } }]).userPrompt, type).toBe(true);
+    }
+    // The system prompt is still read from the input.
+    expect(runPromptReads([{ type: "llm_call", config: { promptTemplate: "Hi" } }]).systemPrompt).toBe(true);
+  });
+
   it("counts a {{user_prompt}} template default only while the node sets none", () => {
     for (const [type, field] of [["prompt_template", "template"], ["rag_retrieve", "queryTemplate"], ["rerank", "queryTemplate"], ["chat_intent_router", "inputTemplate"]] as const) {
       expect(runPromptReads([{ type, config: {} }]).userPrompt, type).toBe(true);

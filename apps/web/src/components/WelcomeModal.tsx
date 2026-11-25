@@ -90,8 +90,9 @@ export function WelcomeModal({
               Welcome to L<sup>2</sup>M
             </h2>
             <p id="welcome-subtitle" className="welcome-subtitle">
-              The MCP-native agent runtime — visual workflows, multi-agent Swarm,
-              and a VS Code surface. Pick a starting point.
+              Put AI agents into production, on your own servers. Build agents and workflows visually,
+              connect any MCP server, and control every tool call with approvals, budgets and replay tests.
+              Pick a starting point.
             </p>
           </div>
           <button
@@ -116,7 +117,8 @@ export function WelcomeModal({
             <span className="welcome-action-title">Run a starter</span>
             <span className="welcome-action-body">
               Pick one of the Starters and click Use Template, then Run. Each runs
-              on built-in sample data: no model, key or server needed.
+              on built-in sample data: no model, key or server needed. "Agent that
+              calls a tool" shows an agent's tool call on the built-in test model.
             </span>
           </button>
 

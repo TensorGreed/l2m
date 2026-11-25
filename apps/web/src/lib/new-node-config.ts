@@ -10,6 +10,7 @@ import { newNodeBaseConfig } from "@ai-orchestrator/shared";
  *   example URL, three sample Set rows, a `status = active` condition, a `documents` loop key). The inspector shows
  *   the examples as grey placeholders.
  * - A Schedule Trigger starts switched off, in the browser's time zone, so a scratch workflow never fires on its own.
+ * - An MCP Tool added to an agent's tool port starts on all of its server's tools.
  */
 const TRIGGER_PATH_NODE_TYPES = new Set(["webhook_input", "form_trigger", "mcp_server_trigger", "a2a_trigger"]);
 
@@ -20,6 +21,8 @@ export interface NewNodeContext {
   timeZone?: string;
   /** The node is added straight after a Loop body node: a Merge there collects the loop's passes. */
   afterLoopBodyNode?: boolean;
+  /** The agent port the node is attached to, when it is added from an agent's attachment drawer. */
+  attachedAs?: string;
 }
 
 function randomSuffix(): string {
@@ -53,6 +56,13 @@ export function newNodeConfig(
     if (zone) config.timezone = zone;
   }
   if (nodeType === "merge_node" && options.afterLoopBodyNode) config.mode = "collect_loop_passes";
+  // An MCP Tool on an agent's tool port offers the agent every tool of the server (the agent decides), not the
+  // sample's one tool with fixed arguments. Saved nodes keep what they have.
+  if (nodeType === "mcp_tool" && options.attachedAs === "tool") {
+    config.toolName = "__all__";
+    delete config.argsTemplate;
+    delete config.allowedTools;
+  }
 
   if (TRIGGER_PATH_NODE_TYPES.has(nodeType)) {
     const base =
