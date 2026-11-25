@@ -22,6 +22,8 @@ A chat completion is billed on its input tokens and its output tokens. An <Term 
 | 2 | All of turn 1, the model's tool request, the tool result | Tool results are added to the conversation |
 | 3 | All of turn 2, another request, another result | The conversation keeps growing until the model answers |
 
+With round numbers: instructions of 1,000 tokens and tool definitions of 2,000 make the first call 3,000 input tokens. If each tool result adds about 500, five calls send 3,000 + 3,500 + 4,000 + 4,500 + 5,000 = 20,000 input tokens for one question. Half of that is the same tool definitions, sent five times, and the total grows faster than the number of calls.
+
 So the same question can cost very different amounts. A task that needs one tool call costs two model calls. A task where the model keeps searching costs as many calls as the loop allows, each with a longer input than the one before.
 
 The usual causes of a surprise bill:
@@ -42,6 +44,15 @@ The cheapest control is inside the run itself:
 - **Shorter tool results.** Trim results before they go back to the model: fields the task does not need, long lists, raw HTML.
 
 None of these needs a budget, and all of them make the per-run cost predictable enough to budget for.
+
+## Make each call cheaper
+
+Once a run is capped, the price of each call is the next lever:
+
+- **Route simple steps to a smaller model.** Sorting a request or pulling a field out of an email rarely needs the largest model. Keep the large model for the hard reasoning, and check the smaller model's answers on real examples before you switch a step over.
+- **Use <Term id="prompt-caching">prompt caching</Term>.** Many providers charge less for a repeated start of a prompt, such as the instructions and tool definitions every call of a run sends. Keep that start identical from call to call so the cache can hit.
+- **Cache tool results** that will not change during a run, instead of fetching them again.
+- **Measure before you optimise.** Record tokens and cost per run, per step and per tool, and fix the biggest number first, not the one you guessed.
 
 ## Caps at different scopes
 
