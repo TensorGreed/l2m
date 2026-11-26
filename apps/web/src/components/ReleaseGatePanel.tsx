@@ -128,6 +128,13 @@ function WorkflowReleaseView({ workflowId, activeProjectId, canEdit, isAdmin }: 
       setForm(gateFormFrom(response.gate));
       setAdmitAddedSetCases(false);
       setNotice("Gate saved.");
+      // The release list reads the gate (its verdicts and what each row may do), so it is fetched again rather than
+      // waiting for a page reload.
+      try {
+        setHistory(await fetchReleases(workflowId));
+      } catch {
+        // The gate is saved; the list keeps its last copy and refreshes on the next load.
+      }
     } catch (err) {
       setFormErrors([errorText(err, "Could not save the gate")]);
     } finally {
