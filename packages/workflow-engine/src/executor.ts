@@ -6401,13 +6401,19 @@ async function executeNodeHandler(
              : typeof config.knowledgeBaseId === "string"
                ? config.knowledgeBaseId
                : "";
-           if (!kbId) {
-             throw new Error("knowledge-base vector store requires vectorStoreConfig.knowledgeBaseId");
+           // No knowledge base picked (or a template's placeholder id): fail, never answer from an empty context.
+           const pickKnowledgeBase =
+             "Open the RAG Retrieve node and pick one under Knowledge Base. Create one under Knowledge in the sidebar if you have none.";
+           if (!kbId.trim()) {
+             throw new WorkflowError("RAG Retrieve searches a knowledge base, but none is picked.", ErrorCategory.NODE_CONFIG, false, undefined, pickKnowledgeBase);
            }
            if (!dependencies.knowledgeBaseStore) {
              throw new Error(
                "knowledge-base vector store unavailable — dependencies.knowledgeBaseStore not wired"
              );
+           }
+           if (!(await dependencies.knowledgeBaseStore.getKnowledgeBase(kbId))) {
+             throw new WorkflowError(`RAG Retrieve searches knowledge base '${kbId}', which does not exist.`, ErrorCategory.NODE_CONFIG, false, undefined, pickKnowledgeBase);
            }
            // v74 — a search that returns a chunk written by sensitive work is a read of marked content.
            const sensitivity = dependencies.sessionSensitivity;
