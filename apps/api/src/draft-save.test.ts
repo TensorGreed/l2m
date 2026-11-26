@@ -282,6 +282,8 @@ describe("the webhook test payload", () => {
       payload: { workflow_id: "wf-hook-draft", payload: { customer: "Bo" } }
     });
     expect(stream.statusCode).toBe(200);
+    // A proxy in front (the Docker image's nginx) must pass each event on at once.
+    expect(stream.headers["x-accel-buffering"]).toBe("no");
     expect(stream.body).toContain("order for Bo");
   });
 

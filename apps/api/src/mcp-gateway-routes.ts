@@ -3019,6 +3019,7 @@ export function registerMcpGatewayRoutes(deps: McpGatewayDeps) {
           "content-type": "text/event-stream",
           "cache-control": "no-cache, no-transform",
           connection: "keep-alive",
+          "x-accel-buffering": "no",
           "mcp-session-id": session.id,
           "x-request-id": request.id
         });

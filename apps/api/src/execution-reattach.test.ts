@@ -133,6 +133,7 @@ describe("GET /api/executions/:id/events", () => {
     const stream = await context.app.inject({ method: "GET", url: `/api/executions/${result.executionId}/events`, headers: { cookie: builder } });
     expect(stream.statusCode).toBe(200);
     expect(stream.headers["content-type"]).toContain("text/event-stream");
+    expect(stream.headers["x-accel-buffering"]).toBe("no");
     const events = sseEvents(stream.body);
     expect(events.map((entry) => entry.event)).toEqual(["execution", "result"]);
     expect(events[0]!.data).toMatchObject({ id: result.executionId, status: "success" });

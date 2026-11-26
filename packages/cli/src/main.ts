@@ -61,7 +61,6 @@ import { runGoldenExport, runGoldenImport, runGoldenVerify } from "./golden";
 import { JOB_ONLY_BOOLEANS, JOB_ONLY_FLAGS, replayFlags, runReplayJob, runReplayStatus } from "./replay-job";
 import { runReleasePublish } from "./release";
 import { GUARD_BENCHMARK_FLAGS, runGuardBenchmarkCommand } from "./guard-benchmark";
-import { runNerModelsCommand } from "@ai-orchestrator/ner/models";
 import { formatAuditVerifyResult, parsePublicKeyInput, PublicKeyInputError, verifyAuditBundle } from "./audit-verify";
 
 export type { CliIo } from "./api";
@@ -553,6 +552,14 @@ function commandOf(positionals: string[]): string | null {
 export async function main(argv: string[], io: CliIo): Promise<number> {
   // `l2m models …` has its own flags (shared with the l2m-ner image), so it is parsed there.
   if (argv[0] === "models") {
+    // Loaded only for this command: the API image carries the CLI without the l2m-ner package's dependencies.
+    let runNerModelsCommand: (typeof import("@ai-orchestrator/ner/models"))["runNerModelsCommand"];
+    try {
+      ({ runNerModelsCommand } = await import("@ai-orchestrator/ner/models"));
+    } catch {
+      write(io.stderr, "l2m models needs the l2m-ner package. Run it from the l2m-ner image or from a checkout of the repository.");
+      return 2;
+    }
     return runNerModelsCommand(argv.slice(1), { stdout: io.stdout, stderr: io.stderr, stdin: io.stdin, env: io.env, ...(io.fetch ? { fetchImpl: io.fetch } : {}) });
   }
   try {
