@@ -1,4 +1,5 @@
 import { filterAsync, mapAsync, someAsync } from "./async-array.js";
+import { callerReplyOutput } from "./caller-reply-output.js";
 import crypto from "node:crypto";
 import os from "node:os";
 import fs from "node:fs";
@@ -13739,7 +13740,7 @@ button{padding:10px 16px;background:#2b6cb0;color:#fff;border:none;border-radius
         executionId,
         status: result.status,
         session_id: sessionId,
-        output: result.output
+        output: callerReplyOutput(workflow, result.output)
       };
     }
   );
@@ -14878,7 +14879,8 @@ const NO_WEBHOOK_MATCH_MESSAGE = "No webhook endpoint matches this path and meth
         }
 
         const defaultResponsePayload = {
-          output: result.output ?? null,
+          // A workflow without an Output node answers with its last node's own fields, never the run context.
+          output: callerReplyOutput(match.workflow, result.output) ?? null,
           // Phase 12 coverage — under response rules the error text (which can quote run data) stays in the history.
           error: result.status === "error" ? callerErrorOf(result, "Workflow execution failed") : undefined,
           // A stable code for the failure, when it has one (`workflow_unfinished`: a sub-workflow production refuses).
