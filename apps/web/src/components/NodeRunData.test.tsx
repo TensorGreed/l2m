@@ -179,8 +179,12 @@ describe("NodeRunOutput", () => {
     const { unmount } = render(<NodeRunOutput result={sortResult} labelFor={labelFor} emptyFields={["nickname", "meta.tag"]} />);
     expect(screen.getByTestId("run-data-rendered-empty")).toHaveTextContent("Rendered empty: nickname, meta.tag");
     unmount();
-    render(<NodeRunOutput result={sortResult} labelFor={labelFor} emptyFields={[]} />);
+    const second = render(<NodeRunOutput result={sortResult} labelFor={labelFor} emptyFields={[]} />);
     expect(screen.queryByTestId("run-data-rendered-empty")).toBeNull();
+    second.unmount();
+    // The run's own list of empty templates comes first.
+    render(<NodeRunOutput result={{ ...sortResult, renderedEmpty: ["customer.nickname"] }} labelFor={labelFor} emptyFields={["nickname"]} />);
+    expect(screen.getByTestId("run-data-rendered-empty")).toHaveTextContent("Rendered empty: {{customer.nickname}}");
   });
 
   it("sums up status, item count and duration in one line", () => {

@@ -569,7 +569,10 @@ interface NodeRunOutputProps {
   notFromRun?: { label: string; content: ReactNode };
   /** Repeat the input next to an error (the tabs view, where the input is not beside the output). */
   failingInput?: ReactNode;
-  /** Output fields a `{{ }}` template filled with nothing in this run (see renderedEmptyFields). */
+  /**
+   * Output fields a `{{ }}` template filled with nothing, worked out from the node's settings (see renderedEmptyFields).
+   * Used for runs that do not name them: the run's own `renderedEmpty` comes first.
+   */
   emptyFields?: readonly string[];
 }
 
@@ -599,6 +602,8 @@ export function NodeRunOutput({ result, labelFor, onOpenNode, nodeExists = ALWAY
     if (notFromRunBlock) return notFromRunBlock;
     return <div className="insp-empty">No run yet for this node. Run the workflow, or this node, to see its output.</div>;
   }
+  const recordedEmpty = result.renderedEmpty?.filter((body) => body.trim()) ?? [];
+  const emptyShown = recordedEmpty.length > 0 ? recordedEmpty.map((body) => `{{${body}}}`) : (emptyFields ?? []);
   const use = attachmentUse(result);
   if (use) return <AttachmentNote use={use} labelFor={labelFor} onOpenNode={onOpenNode} nodeExists={nodeExists} />;
   return (
@@ -634,13 +639,13 @@ export function NodeRunOutput({ result, labelFor, onOpenNode, nodeExists = ALWAY
           {failingInput}
         </details>
       ) : null}
-      {result.status !== "running" && result.output !== undefined && emptyFields && emptyFields.length > 0 ? (
+      {result.status !== "running" && result.output !== undefined && emptyShown.length > 0 ? (
         <p
           className="run-data-chip run-data-chip-warn"
           data-testid="run-data-rendered-empty"
           title="A {{ }} in this setting had no value in this run, so it rendered as an empty string."
         >
-          Rendered empty: {emptyFields.join(", ")}
+          Rendered empty: {emptyShown.join(", ")}
         </p>
       ) : null}
       {result.status !== "running" && result.output !== undefined ? (
