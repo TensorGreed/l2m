@@ -40,7 +40,7 @@ const draft = {
       id: "post_order",
       type: "http_request",
       label: "Post order",
-      config: { method: "POST", urlTemplate: "https://shop.example.com/orders", bodyTemplate: "{\"id\": \"{{shape_order.orderId}}\"}" }
+      config: { method: "POST", urlTemplate: "https://shop.acme.dev/orders", bodyTemplate: "{\"id\": \"{{shape_order.orderId}}\"}" }
     }
   ],
   edges: [
@@ -150,7 +150,7 @@ test("with a model it previews the draft and saves it as a new workflow", async 
   await expect(dialog.getByTestId("builder-preview-nodes")).toContainText("Incoming order");
   await expect(dialog.getByTestId("builder-preview-nodes")).toContainText("Shape order");
   await expect(dialog.getByTestId("builder-preview-nodes")).toContainText("Post order");
-  await expect(dialog.getByTestId("builder-preview-addresses")).toContainText("https://shop.example.com/orders");
+  await expect(dialog.getByTestId("builder-preview-addresses")).toContainText("https://shop.acme.dev/orders");
   // Catalog, details, the rejected draft and the fixed one: four model turns, none after the accepted draft.
   expect(modelRequests).toHaveLength(4);
   expect(await workflowIds()).toEqual(workflowIdsBefore);
