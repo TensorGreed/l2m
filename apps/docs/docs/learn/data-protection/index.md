@@ -1,7 +1,7 @@
 ---
 layout: page
 sidebar: false
-title: "Data protection for AI: personal data, PII and retention"
+title: "Data protection for AI: personal data and PII"
 description: "Guides to data protection for AI systems: personal data vs PII, anonymisation vs pseudonymisation, retention, secrets and data in prompts."
 track: data-protection
 ---

@@ -1,7 +1,7 @@
 ---
 layout: page
 sidebar: false
-title: "AI governance: the EU AI Act, NIST AI RMF and ISO 42001"
+title: "AI governance: EU AI Act, NIST AI RMF, ISO 42001"
 description: "Guides to AI governance: the EU AI Act risk levels, the NIST AI Risk Management Framework, ISO/IEC 42001, approvals, audit and model risk."
 track: governance
 ---

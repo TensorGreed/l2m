@@ -1,7 +1,7 @@
 ---
 layout: page
 sidebar: false
-title: "AI tools explained: vector databases, providers and more"
+title: "AI tools explained: vector databases and more"
 description: "Neutral explainers of the tools around AI apps: vector databases, embeddings and similarity, model providers, observability and agent frameworks."
 track: tools
 ---
