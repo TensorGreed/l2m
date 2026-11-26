@@ -58,6 +58,12 @@ import { displayNodeStatus } from "../lib/run-data";
 type DefinitionNode = PaletteDefinition;
 
 const ATTACHMENT_HANDLE_IDS = new Set<string>(AGENT_ATTACHMENT_HANDLES);
+/**
+ * Fitting the view never zooms past 100%: a workflow of one or two nodes would otherwise fill the canvas (React Flow
+ * zooms up to 2x), with the nodes behind the stage strip.
+ */
+export const FIT_MAX_ZOOM = 1;
+const FIT_WHOLE_GRAPH = { padding: 0.18, maxZoom: FIT_MAX_ZOOM } as const;
 
 type LogsTab = "logs" | "inputs";
 type PanelTab = "tape" | "logs";
@@ -528,7 +534,7 @@ export function WorkflowCanvasArea({
       .map(([id, position]) => ({ type: "position", id, position }));
     if (changes.length) onNodesChange(changes);
     if (reactFlowInstance) {
-      window.setTimeout(() => reactFlowInstance.fitView({ padding: 0.18, duration: 320 }), 30);
+      window.setTimeout(() => reactFlowInstance.fitView({ ...FIT_WHOLE_GRAPH, duration: 320 }), 30);
     }
   }, [edges, nodeById, nodes, onBeforeTidy, onNodesChange, reactFlowInstance]);
 
@@ -562,7 +568,7 @@ export function WorkflowCanvasArea({
           if (hub) for (const attachedId of Object.keys(orbitPositions(id, slots, hub.position))) ids.add(attachedId);
         }
       }
-      reactFlowInstance.fitView({ nodes: [...ids].map((id) => ({ id })), padding: 0.35, duration: 320 });
+      reactFlowInstance.fitView({ nodes: [...ids].map((id) => ({ id })), padding: 0.35, maxZoom: FIT_MAX_ZOOM, duration: 320 });
     },
     [nodeById, reactFlowInstance, slots]
   );
@@ -601,7 +607,7 @@ export function WorkflowCanvasArea({
   const selectNodeFromTape = useCallback(
     (nodeId: string) => {
       onNodesChange(nodes.map((node) => ({ type: "select", id: node.id, selected: node.id === nodeId })));
-      reactFlowInstance?.fitView({ nodes: [{ id: nodeId }], padding: 1.2, duration: 280 });
+      reactFlowInstance?.fitView({ nodes: [{ id: nodeId }], padding: 1.2, maxZoom: FIT_MAX_ZOOM, duration: 280 });
     },
     [nodes, onNodesChange, reactFlowInstance]
   );
@@ -788,7 +794,7 @@ export function WorkflowCanvasArea({
                 if (armed && armed.id === node.id && Math.hypot(event.clientX - armed.x, event.clientY - armed.y) < 5) onOpenNodeConfig(node.id);
               }}
               fitView
-              fitViewOptions={{ padding: 0.18 }}
+              fitViewOptions={FIT_WHOLE_GRAPH}
               zoomOnDoubleClick={false}
               multiSelectionKeyCode={["Shift", "Meta", "Control"]}
               selectionKeyCode={["Shift"]}
@@ -838,7 +844,7 @@ export function WorkflowCanvasArea({
               <button type="button" className="canvas-tool" onClick={applyTidy} disabled={nodes.length === 0} title="Lay out stages left to right">
                 Tidy
               </button>
-              <button type="button" className="canvas-tool" onClick={() => reactFlowInstance?.fitView({ padding: 0.18, duration: 240 })} title="Fit to view">
+              <button type="button" className="canvas-tool" onClick={() => reactFlowInstance?.fitView({ ...FIT_WHOLE_GRAPH, duration: 240 })} title="Fit to view">
                 Fit
               </button>
               <button

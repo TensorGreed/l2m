@@ -148,6 +148,48 @@ test.describe("palette and canvas flow", () => {
     await expect.poll(() => edgeCount(page)).toBe(edgesBefore + 1);
   });
 
+  test("an agent added after a node that leads on goes into that edge, and the Output shows its answer", async ({ page }) => {
+    await openStudio(page);
+    const id = `wf-e2e-canvas-splice-${Date.now()}`;
+    made.push(id);
+    await createWorkflow(
+      page,
+      id,
+      [
+        { id: "user_prompt", type: "user_prompt", name: "User Prompt", x: 140, y: 180, config: { text: "hi" } },
+        { id: "output", type: "output", name: "Output", x: 420, y: 180, config: { responseTemplate: "{{user_prompt}}", outputKey: "result" } }
+      ],
+      [["user_prompt", "output"]]
+    );
+    await openWorkflow(page, id, "User Prompt");
+    // Fitting two nodes never zooms past 100%.
+    const zoom = async () =>
+      Number(
+        /scale\(([\d.]+)\)/.exec((await page.locator(".react-flow__viewport").getAttribute("style")) ?? "")?.[1] ?? "NaN"
+      );
+    expect(await zoom()).toBeLessThanOrEqual(1);
+
+    await canvasNode(page, "User Prompt").click();
+    await addFromPalette(page, "agent orchestrator");
+    await expect(page.locator(".react-flow__node").filter({ hasText: "Agent Orchestrator" }).first()).toBeVisible();
+    // No parallel branch: prompt → agent → output, and the Output moved right of the agent's rings.
+    const saved = page.waitForResponse((response) => response.request().method() === "POST" && response.url().endsWith("/api/workflows"));
+    await page.getByRole("banner").getByRole("button", { name: /^Save/ }).click();
+    expect((await saved).ok()).toBeTruthy();
+    const stored = (await (await page.request.get(`/api/workflows/${id}`)).json()) as {
+      nodes: Array<{ id: string; type: string; position: { x: number }; config: Record<string, unknown> }>;
+      edges: Array<{ source: string; target: string; sourceHandle?: string }>;
+    };
+    const agent = stored.nodes.find((node) => node.type === "agent_orchestrator")!;
+    const output = stored.nodes.find((node) => node.id === "output")!;
+    const steps = stored.edges.filter((edge) => !edge.sourceHandle).map((edge) => `${edge.source}>${edge.target}`).sort();
+    expect(steps).toEqual([`${agent.id}>output`, `user_prompt>${agent.id}`].sort());
+    expect(output.config.responseTemplate).toBe("{{answer}}");
+    // The rings reach 226px from the agent's centre (its card is 150 wide).
+    expect(output.position.x).toBeGreaterThanOrEqual(agent.position.x + 75 + 226);
+    await page.screenshot({ path: "test-results/canvas-flow-splice.png" });
+  });
+
   test("the + on an output opens the palette connected after that output", async ({ page }) => {
     await openStudio(page);
     const id = `wf-e2e-canvas-plus-${Date.now()}`;
