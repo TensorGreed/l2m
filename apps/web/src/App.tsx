@@ -181,6 +181,7 @@ import type { McpNavTarget } from "./lib/mcp-control-plane";
 import { useMcpCanvasStatus } from "./lib/use-mcp-canvas-status";
 import { TemplateGallery } from "./components/TemplateGallery";
 import { WelcomeModal, isWelcomeDismissed, markWelcomeDismissed } from "./components/WelcomeModal";
+import { HomeNewCards } from "./components/HomeNewCards";
 import { HomeStarters } from "./components/HomeStarters";
 import { AcceptInviteCard } from "./components/AcceptInviteCard";
 import { IdleSessionWarning } from "./components/IdleSessionWarning";
@@ -5773,6 +5774,10 @@ function StudioApp() {
                   )}
                 </div>
               </header>
+
+              {canManageWorkflows && !inNoProject && (
+                <HomeNewCards projectId={activeProjectId} onWorkflowCreated={handleTemplateWorkflowCreated} />
+              )}
 
               {canManageWorkflows && !inNoProject && (
                 <HomeStarters

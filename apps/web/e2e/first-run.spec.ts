@@ -131,6 +131,25 @@ test.describe("Home and the gallery for a new user", () => {
     await page.addInitScript(() => window.localStorage.setItem("l2m:welcome-dismissed", "1"));
   });
 
+  test("Home's New cards each open a new workflow from their template", async ({ page }) => {
+    const ollama = await guardLocalModels(page);
+    const before = await workflowIds(page);
+    try {
+      for (const [card, name] of [
+        ["Chat agent", "MCP Agent Quickstart"],
+        ["Automation", "Schedule: fetch, filter and notify"],
+        ["Ask your documents", "RAG Flow"]
+      ] as const) {
+        await page.goto("/?mode=dashboard");
+        await page.getByTestId("home-new").getByRole("button", { name: `Start ${card}` }).click();
+        await expect(page.getByLabel("Workflow name")).toHaveValue(`${name} (from template)`, { timeout: 60_000 });
+      }
+      expect(ollama).toEqual([]);
+    } finally {
+      await removeNew(page, before);
+    }
+  });
+
   test("Home lists the starters before the workflows, and Use opens a new workflow from one", async ({ page }) => {
     const ollama = await guardLocalModels(page);
     const before = await workflowIds(page);
@@ -139,6 +158,11 @@ test.describe("Home and the gallery for a new user", () => {
       const row = page.getByTestId("home-starters");
       await expect(row).toBeVisible({ timeout: 60_000 });
       await expect(row.locator(".home-starter-card")).toHaveCount(4);
+      // Above the starters: three ways to start, each from a built-in template.
+      const fresh = page.getByTestId("home-new");
+      await expect(fresh.locator(".home-starter-card")).toHaveCount(3);
+      await expect(fresh.getByRole("heading", { level: 4 })).toHaveText(["Chat agent", "Automation", "Ask your documents"]);
+      expect((await fresh.boundingBox())!.y).toBeLessThan((await row.boundingBox())!.y);
       // First on the page: above the search, folders and workflow cards.
       const rowTop = (await row.boundingBox())!.y;
       const searchTop = (await page.getByLabel("Search workflows").boundingBox())!.y;
