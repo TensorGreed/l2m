@@ -324,6 +324,33 @@ describe("approvals inbox", () => {
     expect(rejected.json<RunResult>().error).toBe("Human approval rejected");
   });
 
+  it("leaves the wait for a decision out of the usage latency", async () => {
+    const context = await createTestContext();
+    const builder = await login(context, "builder");
+    const admin = await login(context, "admin");
+    const workflow = {
+      id: "wf-latency",
+      name: "Latency",
+      schemaVersion: "1.0.0",
+      workflowVersion: 1,
+      projectId: "default",
+      nodes: [node("hook", "webhook_input", { path: "hook-latency", method: "POST" }), node("approve", "human_approval", { approvalMessage: "ok?", timeoutMinutes: 5 }), node("out", "output")],
+      edges: [{ id: "e1", source: "hook", target: "approve" }, { id: "e2", source: "approve", target: "out" }]
+    } as Workflow;
+    const run = await startRun(context, workflow, builder.cookie);
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const approved = await call(context, "POST", `/api/approvals/${run.executionId}/approve`, builder.cookie, {});
+    expect(approved.statusCode, approved.body).toBe(200);
+
+    // The run history keeps the wall time; the usage row holds the time the run worked.
+    expect((await context.store.getExecutionHistory(run.executionId!))?.durationMs ?? 0).toBeGreaterThanOrEqual(1500);
+    const [event] = await context.store.listUsageEvents({ workflowId: "wf-latency" });
+    expect(event?.durationMs).toBeLessThan(1000);
+    const { totals } = (await call(context, "GET", "/api/usage/totals", admin.cookie)).json<{ totals: { executions: number; avgDurationMs: number } }>();
+    expect(totals.executions).toBe(1);
+    expect(totals.avgDurationMs).toBeLessThan(1000);
+  });
+
   it("cancels the pending request when the run is canceled", async () => {
     const context = await createTestContext();
     const requester = await login(context, "builder", "requester");

@@ -1,5 +1,6 @@
 import { filterAsync, mapAsync, someAsync } from "./async-array.js";
 import { callerReplyOutput } from "./caller-reply-output.js";
+import { activeDurationMs } from "./run-active-duration.js";
 import crypto from "node:crypto";
 import os from "node:os";
 import fs from "node:fs";
@@ -3545,6 +3546,10 @@ export async function createApp(
       }
       // 12.6 — a gateway call's run is the client's, also the part after an approval (whoever decided it).
       const usageUser = usageUserOf(input.triggeredBy, input.gatewayUsage);
+      // Latency is the time the run worked: a resumed run keeps its first start, so its wait for approvals is left out.
+      // Without the approval rows the wall time is recorded, as before.
+      const approvalWaits = await store.listApprovalRequestsForExecution(input.executionId).catch(() => []);
+      const usageDurationMs = activeDurationMs(input.result.startedAt, input.result.completedAt, approvalWaits);
       // The run's sub-workflows' spend joins its row; a child that ends later is recorded on its own.
       const runSubWorkflowSpend = subWorkflowSpend.take(input.executionId);
       const subWorkflowTelemetry = runSubWorkflowSpend?.closeIntoRun() ?? [];
@@ -3558,7 +3563,7 @@ export async function createApp(
         triggerType: input.triggerType ?? null,
         ...(input.gatewayUsage ? { clientId: input.gatewayUsage.clientId, toolsetId: input.gatewayUsage.toolsetId } : {}),
         status: input.result.status,
-        durationMs: toDurationMs(input.result.startedAt, input.result.completedAt) ?? 0,
+        durationMs: usageDurationMs,
         nodeResults: nodeOutputs,
         ...(input.liveModelCalls ? { liveModelCalls: input.liveModelCalls } : {}),
         ...(subWorkflowTelemetry.length > 0 ? { subWorkflowTelemetry } : {})
