@@ -41,12 +41,19 @@ const dependencies = () => ({
 });
 
 describe("RAG Retrieve on a knowledge base", () => {
-  it("fails with a fix hint when the knowledge base the template names does not exist", async () => {
+  it("does not start while the template's placeholder knowledge base is still in place", async () => {
     const result = await executeWorkflow({ workflow: templateWorkflow("<your-kb-id>") }, dependencies());
+    expect(result.status).toBe("error");
+    expect(result.error).toContain("needs a knowledge base");
+    expect(result.nodeResults.find((node) => node.nodeId === "llm_1")?.status ?? "not run").not.toBe("success");
+  });
+
+  it("fails with a fix hint when the knowledge base it names does not exist", async () => {
+    const result = await executeWorkflow({ workflow: templateWorkflow("kb-deleted") }, dependencies());
     expect(result.status).toBe("error");
     const rag = result.nodeResults.find((node) => node.nodeId === "rag_1");
     expect(rag?.status).toBe("error");
-    expect(rag?.error).toContain("'<your-kb-id>', which does not exist");
+    expect(rag?.error).toContain("'kb-deleted', which does not exist");
     expect(rag?.errorRemediation).toContain("pick one under Knowledge Base");
     expect(result.nodeResults.find((node) => node.nodeId === "llm_1")?.status ?? "not run").not.toBe("success");
   });
@@ -54,7 +61,7 @@ describe("RAG Retrieve on a knowledge base", () => {
   it("fails when no knowledge base is picked", async () => {
     const result = await executeWorkflow({ workflow: templateWorkflow("  ") }, dependencies());
     expect(result.status).toBe("error");
-    expect(result.nodeResults.find((node) => node.nodeId === "rag_1")?.error).toContain("none is picked");
+    expect(result.error).toContain("needs a knowledge base");
   });
 
   it("searches a knowledge base that exists", async () => {
