@@ -251,6 +251,7 @@ interface NodeDrawerContext {
   allowedTypes: string[];
   sourceNodeId?: string;
   sourceHandle?: AgentAttachmentHandle;
+  itemDescriptions?: Partial<Record<string, string>>;
 }
 
 interface MCPServerDefinition {
@@ -416,6 +417,7 @@ function buildAgentAttachmentDrawerContext(sourceNodeId: string, sourceHandle: A
     title: "Tools",
     description: "Choose a tool node to attach to this AI Agent: an MCP server, a built-in tool, or another workflow.",
     allowedTypes: ["mcp_tool", "workflow_tool"],
+    itemDescriptions: { mcp_tool: "Gives the agent every tool of an MCP server (or the ones you pick). The agent decides which to call." },
     sourceNodeId,
     sourceHandle
   };

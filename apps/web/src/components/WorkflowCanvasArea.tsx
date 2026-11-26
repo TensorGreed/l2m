@@ -74,6 +74,8 @@ interface NodeDrawerContext {
   allowedTypes: string[];
   sourceNodeId?: string;
   sourceHandle?: AgentAttachmentHandle;
+  /** What a node does on this port, where it differs from its catalog description (an MCP Tool on a tool port). */
+  itemDescriptions?: Partial<Record<string, string>>;
 }
 
 interface PaletteCategoryMeta {
@@ -386,7 +388,10 @@ export function WorkflowCanvasArea({
   const filteredDefinitions = useMemo(() => {
     if (!nodeDrawerContext) return null;
     const allowed = new Set(nodeDrawerContext.allowedTypes);
-    return allDefinitions.filter((definition) => allowed.has(definition.type));
+    const described = nodeDrawerContext.itemDescriptions ?? {};
+    return allDefinitions
+      .filter((definition) => allowed.has(definition.type))
+      .map((definition) => (described[definition.type] ? { ...definition, description: described[definition.type]! } : definition));
   }, [allDefinitions, nodeDrawerContext]);
 
   const handleAddNode = useCallback(

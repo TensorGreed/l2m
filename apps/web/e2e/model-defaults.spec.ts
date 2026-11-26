@@ -122,6 +122,22 @@ test("the agent's Language Models drawer offers LLM Call", async () => {
   expect(modelListRequests).toHaveLength(1);
 });
 
+test("an MCP Tool from the agent's Tools drawer is described for the port and starts on all tools", async () => {
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: /^Add tool/i }).first().click();
+  await expect(page.getByRole("heading", { name: "Tools" })).toBeVisible();
+  const row = page.locator(".node-palette-node-row").filter({ hasText: "MCP Tool" }).first();
+  await expect(row).toContainText("The agent decides which to call.");
+  await row.click();
+  const tool = page.locator(".react-flow__node").filter({ hasText: "MCP Tool" }).first();
+  await expect(tool).toBeVisible();
+  await tool.dblclick();
+  const inspector = page.getByRole("dialog", { name: /^Inspect / });
+  await expect(inspector.getByRole("combobox", { name: "Tools To Include" })).toHaveValue("all");
+  await page.screenshot({ path: path.join(SHOT_DIR, "after-03b-tools-drawer-mcp-all.png") });
+  await inspector.getByRole("button", { name: "Close inspector" }).click();
+});
+
 test("the template gallery says which templates need a model", async () => {
   await page.keyboard.press("Escape");
   await sidebarItem("Templates").click();
