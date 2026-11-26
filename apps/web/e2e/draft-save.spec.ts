@@ -142,6 +142,27 @@ test.describe("editor drafts and run feedback", () => {
     }
   });
 
+  test("marks a Set field its template filled with nothing in the run data", async ({ page }) => {
+    await guardLocalModels(page);
+    await signIn(page);
+    const id = `wf-e2e-empty-${Date.now()}`;
+    try {
+      const flow = hookFlow(id);
+      flow.nodes[1] = {
+        ...(flow.nodes[1] as Record<string, unknown>),
+        config: { assignments: [{ key: "line", valueTemplate: "order for {{webhook.customer}}" }, { key: "nickname", valueTemplate: "{{webhook.nickname}}", type: "auto" }] }
+      } as (typeof flow.nodes)[number];
+      expect((await page.request.post("/api/workflows", { data: flow })).ok()).toBeTruthy();
+      expect((await page.request.post(`/api/workflows/${id}/execute`, { data: {} })).ok()).toBeTruthy();
+      await openEditor(page, id);
+      await expect(page.locator(".hud-run-status .hud-run-label")).toContainText("last run", { timeout: 15_000 });
+      await page.locator(".react-flow__node").filter({ hasText: "Order line" }).first().dblclick();
+      await expect(page.getByTestId("run-data-rendered-empty")).toHaveText("Rendered empty: nickname");
+    } finally {
+      await page.request.delete(`/api/workflows/${id}`);
+    }
+  });
+
   test("shows the webhook's test and production URLs without a developer hint", async ({ page }) => {
     await guardLocalModels(page);
     await signIn(page);

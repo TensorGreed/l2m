@@ -175,6 +175,14 @@ describe("NodeRunOutput", () => {
     expect(screen.queryByTestId("run-data-status")).toBeNull();
   });
 
+  it("marks fields a template filled with nothing, and only then", () => {
+    const { unmount } = render(<NodeRunOutput result={sortResult} labelFor={labelFor} emptyFields={["nickname", "meta.tag"]} />);
+    expect(screen.getByTestId("run-data-rendered-empty")).toHaveTextContent("Rendered empty: nickname, meta.tag");
+    unmount();
+    render(<NodeRunOutput result={sortResult} labelFor={labelFor} emptyFields={[]} />);
+    expect(screen.queryByTestId("run-data-rendered-empty")).toBeNull();
+  });
+
   it("sums up status, item count and duration in one line", () => {
     render(<RunStatusLine result={sortResult} title="Run success" />);
     expect(screen.getByTestId("run-data-status")).toHaveTextContent("success · 2 items · 12 ms");

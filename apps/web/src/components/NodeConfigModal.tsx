@@ -1,5 +1,6 @@
 import { CONNECTED_ACCOUNT_PROVIDER_IDS, LIVE_ENTRY_NODE_TYPES, NODE_CONNECTED_ACCOUNT_PROVIDERS, describeHttpSecretAuth, readHttpSecretAuth, resolveRagSearchMode, type ConnectedAccountProviderId } from "@ai-orchestrator/shared";
 import { McpToolArgsForm, McpUseFormButton, OpenApiOperationForm, usesMcpArgsForm, usesOpenApiOperation } from "./IntegrationForms";
+import { renderedEmptyFields } from "../lib/rendered-empty";
 import { buildSchemaForm } from "../lib/mcp-schema-form";
 import { createContext, useCallback, useContext, useEffect, useId, useImperativeHandle, useMemo, useRef, useState, type Ref } from "react";
 import type {
@@ -10994,6 +10995,7 @@ export function NodeInspector({
     return (
       <NodeRunOutput
         result={currentRunResult}
+        emptyFields={renderedEmptyFields(node.data.nodeType, node.data.config, currentRunResult?.output)}
         labelFor={labelFor}
         onOpenNode={onNavigateNode}
         nodeExists={nodeExists}
