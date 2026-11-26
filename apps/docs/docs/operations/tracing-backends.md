@@ -1,6 +1,6 @@
 ---
-title: "Send L2M traces to Langfuse, Arize Phoenix or LangSmith"
-description: "Setup recipes for receiving L2M's OpenTelemetry traces in Langfuse, Arize Phoenix and LangSmith over OTLP/HTTP: the endpoint, the auth header and where to set them."
+title: "Send L2M traces to Langfuse, Phoenix or LangSmith"
+description: "Receive L2M OpenTelemetry traces in Langfuse, Arize Phoenix or LangSmith over OTLP/HTTP: the endpoint, the auth header and where to set them."
 ---
 
 # Send traces to Langfuse, Phoenix or LangSmith

@@ -1,6 +1,6 @@
 ---
 title: "Build your first MCP agent in 5 minutes, no API keys"
-description: "Tutorial: from a fresh install (Docker or source) to a self-hosted L2M agent wired to MCP tools in five minutes, with no API keys; add a real model to see it call them."
+description: "Tutorial: from a fresh Docker or source install to an L2M agent wired to MCP tools in five minutes, no API keys; add a real model to see it call them."
 ---
 
 # Build your first MCP agent in 5 minutes

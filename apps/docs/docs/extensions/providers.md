@@ -1,6 +1,6 @@
 ---
 title: "Provider SDK: LLM adapters and adding your own"
-description: "The L2M provider SDK: the built-in LLM adapters (Echo, Ollama, OpenAI, OpenAI-compatible, Azure OpenAI, Gemini, Anthropic), services reachable through the OpenAI-compatible adapter, and adding a provider."
+description: "The L2M provider SDK: the seven built-in LLM adapters, services the OpenAI-compatible adapter reaches, the /v1 gateway, and adding a provider."
 ---
 
 # Provider SDK
