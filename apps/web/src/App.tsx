@@ -130,7 +130,7 @@ import {
   type TraceStreamHandlers
 } from "./lib/run-trace";
 import { ORBIT, attachedNodeIds, computeAttachmentSlots, orbitPositions } from "./lib/stages";
-import { chooseSourceHandle, findFreePosition, insertPositionAfter, planInsertConnection } from "./lib/canvas-insert";
+import { chooseSourceHandle, findFreePosition, insertPositionAfter, planInsertConnection, planSplice } from "./lib/canvas-insert";
 import { canvasRunPreview, displayNodeStatus, hasTestData, loopPassResults, nodeCardResults } from "./lib/run-data";
 import { isDirectLoopBodyNode, newNodeConfig } from "./lib/new-node-config";
 import { copyWorkflowName, nextNewWorkflowName, workflowPickerLabels } from "./lib/workflow-names";
@@ -181,6 +181,7 @@ import type { McpNavTarget } from "./lib/mcp-control-plane";
 import { useMcpCanvasStatus } from "./lib/use-mcp-canvas-status";
 import { TemplateGallery } from "./components/TemplateGallery";
 import { WelcomeModal, isWelcomeDismissed, markWelcomeDismissed } from "./components/WelcomeModal";
+import { HomeNewCards } from "./components/HomeNewCards";
 import { HomeStarters } from "./components/HomeStarters";
 import { AcceptInviteCard } from "./components/AcceptInviteCard";
 import { IdleSessionWarning } from "./components/IdleSessionWarning";
@@ -250,6 +251,7 @@ interface NodeDrawerContext {
   allowedTypes: string[];
   sourceNodeId?: string;
   sourceHandle?: AgentAttachmentHandle;
+  itemDescriptions?: Partial<Record<string, string>>;
 }
 
 interface MCPServerDefinition {
@@ -415,6 +417,7 @@ function buildAgentAttachmentDrawerContext(sourceNodeId: string, sourceHandle: A
     title: "Tools",
     description: "Choose a tool node to attach to this AI Agent: an MCP server, a built-in tool, or another workflow.",
     allowedTypes: ["mcp_tool", "workflow_tool"],
+    itemDescriptions: { mcp_tool: "Gives the agent every tool of an MCP server (or the ones you pick). The agent decides which to call." },
     sourceNodeId,
     sourceHandle
   };
@@ -5010,7 +5013,7 @@ function StudioApp() {
       // A step node (not an agent attachment, not a drop) goes after the selected node or the output whose `+` was used.
       const insertAfter = attachContext?.sourceHandle || (position && !insertSource) ? null : resolveInsertSource(insertSource ?? null);
       const insertPosition = insertAfter
-        ? insertAfter.position ?? insertPositionAfter(insertAfter.node, insertAfter.handle, nodes as EditorNode[])
+        ? insertAfter.position ?? insertPositionAfter(insertAfter.node, insertAfter.handle, nodes as EditorNode[], definition.type)
         : undefined;
       // The same rules as dragging a connection: a refused edge leaves the node placed but unconnected, with the notice.
       const connectPlan = insertAfter
@@ -5023,31 +5026,45 @@ function StudioApp() {
           )
         : null;
       const connectAfter = insertAfter && connectPlan?.kind === "connect" ? { node: insertAfter.node, handle: connectPlan.sourceHandle } : null;
+      // A new model node starts on a configured provider (a server key, else a saved secret) or on Echo.
+      const newConfig = withDefaultModelProvider(
+        definition.type,
+        newNodeConfig(definition.type, definition.sampleConfig, {
+          afterLoopBodyNode: Boolean(connectAfter && isDirectLoopBodyNode(connectAfter.node.id, nodes as EditorNode[], edges)),
+          ...(attachContext?.sourceHandle ? { attachedAs: attachContext.sourceHandle } : {})
+        }),
+        pickDefaultModelProvider({ envProviders: envModelProviders, secrets })
+      );
+      // An output that already leads to one node: the new node goes into that edge, and the nodes after it move right.
+      const splice = connectAfter
+        ? planSplice(connectAfter.node, connectAfter.handle, { id, data: { nodeType: definition.type, label: definition.label, config: newConfig } }, nodes as EditorNode[], edges)
+        : null;
 
       const newNode: Node<EditorNodeData> = {
         id,
         type: definition.type === "sticky_note" ? "stickyNote" : "workflowNode",
-        position: position ?? attachmentPosition ?? insertPosition ?? fallbackPosition,
+        position: position ?? attachmentPosition ?? splice?.position ?? insertPosition ?? fallbackPosition,
         // A step node starts selected, so the next one added connects after it.
         selected: !attachContext?.sourceHandle,
         data: {
           label: definition.label,
           nodeType: definition.type as EditorNodeData["nodeType"],
-          // A new model node starts on a configured provider (a server key, else a saved secret) or on Echo.
-          config: withDefaultModelProvider(
-            definition.type,
-            newNodeConfig(definition.type, definition.sampleConfig, {
-              afterLoopBodyNode: Boolean(connectAfter && isDirectLoopBodyNode(connectAfter.node.id, nodes as EditorNode[], edges)),
-              ...(attachContext?.sourceHandle ? { attachedAs: attachContext.sourceHandle } : {})
-            }),
-            pickDefaultModelProvider({ envProviders: envModelProviders, secrets })
-          )
+          config: newConfig
         }
       };
 
       pushHistorySnapshot();
       setNodes((existing) => [
-        ...(newNode.selected ? existing.map((node) => (node.selected ? { ...node, selected: false } : node)) : existing),
+        ...existing.map((node) => {
+          let next = newNode.selected && node.selected ? { ...node, selected: false } : node;
+          const moved = splice?.moved[node.id];
+          if (moved) next = { ...next, position: moved };
+          // An Output that showed the prompt shows the agent's answer once the agent is put before it.
+          if (splice?.outputTemplate && node.id === splice.replaced.target) {
+            next = { ...next, data: { ...next.data, config: { ...next.data.config, responseTemplate: splice.outputTemplate } } };
+          }
+          return next;
+        }),
         newNode
       ]);
       if (attachContext?.sourceNodeId && attachContext.sourceHandle) {
@@ -5085,7 +5102,33 @@ function StudioApp() {
           },
           [...(nodes as EditorNode[]), newNode as EditorNode]
         );
-        setEdges((existing) => addEdge(edge, existing.map((candidate) => (candidate.selected ? { ...candidate, selected: false } : candidate))));
+        const onward = splice
+          ? decorateEdge(
+              {
+                id: createEdgeId(id, splice.replaced.target),
+                source: id,
+                target: splice.replaced.target,
+                sourceHandle: splice.outgoingHandle ?? undefined,
+                targetHandle: undefined
+              },
+              [...(nodes as EditorNode[]), newNode as EditorNode]
+            )
+          : null;
+        setEdges((existing) => {
+          const kept = existing
+            .filter(
+              (candidate) =>
+                !splice ||
+                !(
+                  candidate.source === splice.replaced.source &&
+                  candidate.target === splice.replaced.target &&
+                  (candidate.sourceHandle ?? null) === (splice.replaced.sourceHandle ?? null)
+                )
+            )
+            .map((candidate) => (candidate.selected ? { ...candidate, selected: false } : candidate));
+          const joined = addEdge(edge, kept);
+          return onward ? addEdge(onward, joined) : joined;
+        });
       }
       if (!attachContext?.sourceHandle) revealCanvasPosition(newNode.position);
       setError(connectPlan?.kind === "refused" ? connectPlan.message : null);
@@ -5733,6 +5776,10 @@ function StudioApp() {
                   )}
                 </div>
               </header>
+
+              {canManageWorkflows && !inNoProject && (
+                <HomeNewCards projectId={activeProjectId} onWorkflowCreated={handleTemplateWorkflowCreated} />
+              )}
 
               {canManageWorkflows && !inNoProject && (
                 <HomeStarters

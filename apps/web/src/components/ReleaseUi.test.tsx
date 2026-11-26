@@ -229,6 +229,27 @@ describe("Release gates tab", () => {
     expect(api.rollbackWorkflowRelease).toHaveBeenCalledWith("wf-1", { version: 2, reason: "Errors in prod" });
   });
 
+  it("fetches the release list again after the gate is saved, without a page reload", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.fetchReleaseGate).mockResolvedValue({ gate: gate() });
+    vi.mocked(api.fetchEvalDatasets).mockResolvedValue({
+      datasets: [{ id: "set-1", name: "Regression suite", description: null, projectId: "default", workflowId: "wf-1", createdBy: null, createdAt: "", updatedAt: "", fixtureCount: 3, goldenRunCount: 3 } as api.EvalDataset]
+    });
+    vi.mocked(api.fetchReleases)
+      .mockResolvedValueOnce({ releases: [], publishedVersion: null })
+      .mockResolvedValue({ releases: [release({ id: "rel_1", version: 2, previousVersion: null, replayRunId: null })], publishedVersion: 2 });
+    vi.mocked(api.saveReleaseGate).mockImplementation(async (_id, settings) => ({ gate: gate({ ...(settings as Partial<ReleaseGateView>), updatedAt: "now" }) }));
+    render(<ReleaseGatePanel workflows={[{ id: "wf-1", name: "Refunds" } as never]} canEdit isAdmin={false} />);
+
+    expect(await screen.findByText("No version was published yet.")).toBeInTheDocument();
+    await user.click(screen.getByLabelText("Gate publishing on replay jobs"));
+    await user.click(screen.getByLabelText(/Regression suite/));
+    await user.click(screen.getByRole("button", { name: "Save gate" }));
+    expect(await screen.findByText("Gate saved.")).toBeInTheDocument();
+    expect(await screen.findByText("v2 live")).toBeInTheDocument();
+    expect(api.fetchReleases).toHaveBeenCalledTimes(2);
+  });
+
   it("an enforced gate is shown as such, and a builder cannot switch it off", async () => {
     vi.mocked(api.fetchReleaseGate).mockResolvedValue({ gate: gate({ enabled: true, enforced: true, datasetIds: ["set-1"] }) });
     vi.mocked(api.fetchEvalDatasets).mockResolvedValue({ datasets: [] });

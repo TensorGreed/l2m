@@ -22,7 +22,7 @@ const webhookToHttp = {
       id: "post_order",
       type: "http_request",
       label: "Post order",
-      config: { method: "POST", urlTemplate: "https://shop.example.com/orders", bodyTemplate: "{\"id\": \"{{webhook.id}}\"}" }
+      config: { method: "POST", urlTemplate: "https://shop.acme.dev/orders", bodyTemplate: "{\"id\": \"{{webhook.id}}\"}" }
     }
   ],
   edges: [{ source: "incoming", target: "post_order" }]
@@ -80,7 +80,7 @@ describe("checkBuilderDraft", () => {
     const http = workflow.nodes[1]!;
     expect(http.name).toBe("Post order");
     // The model's settings win; the rest come from the type's example, as for a node added in the editor.
-    expect(http.config).toMatchObject({ method: "POST", urlTemplate: "https://shop.example.com/orders", responseType: "json" });
+    expect(http.config).toMatchObject({ method: "POST", urlTemplate: "https://shop.acme.dev/orders", responseType: "json" });
     expect(workflow.nodes[1]!.position.x).toBeGreaterThan(workflow.nodes[0]!.position.x);
     expect(workflow.edges).toEqual([expect.objectContaining({ source: "incoming", target: "post_order" })]);
   });
@@ -264,7 +264,7 @@ describe("checkBuilderDraft", () => {
           {
             id: "fetch",
             type: "http_request",
-            config: { method: "GET", urlTemplate: "https://api.example.com", secretRef: { secretId: "s-1" }, headersTemplate: "{}", apiKey: "sk-live-123", sensitiveOutput: true }
+            config: { method: "GET", urlTemplate: "https://api.acme.dev", secretRef: { secretId: "s-1" }, headersTemplate: "{}", apiKey: "sk-live-123", sensitiveOutput: true }
           }
         ],
         edges: [{ source: "hook", target: "fetch" }]
@@ -333,7 +333,7 @@ describe("checkBuilderDraft", () => {
     expect(checkBuilderDraft(draft([{ value: "" }], "default"), { workflowId: "wf" }).issues.map((issue) => issue.message).join()).toMatch(/needs a value/);
   });
 
-  it("gives an LLM Call the builder's model, leaves a chain node on the upstream model, and keeps chat model addresses at their placeholder", () => {
+  it("gives an LLM Call the builder's model, leaves a chain node on the upstream model, and leaves chat model addresses empty for the person to set", () => {
     const check = checkBuilderDraft(
       {
         name: "models",
@@ -357,9 +357,11 @@ describe("checkBuilderDraft", () => {
     const config = (id: string) => check.workflow!.nodes.find((node) => node.id === id)!.config as Record<string, unknown>;
     expect(config("ask").provider).toEqual(NODE_MODEL);
     expect(config("sum").provider).toBeUndefined();
-    expect(config("chat").baseUrl).toBe("http://localhost:1234/v1");
+    expect(config("chat").baseUrl).toBe("");
     expect(JSON.stringify(check.workflow)).not.toContain("elsewhere.example");
-    expect(check.notes.join(" ")).toMatch(/Left the model server address at its placeholder \(OpenAI[^:]*: Base URL\)/);
+    expect(JSON.stringify(check.workflow)).not.toContain("localhost:1234");
+    expect(check.notes.join(" ")).toMatch(/Left out the model server address the model wrote \(OpenAI[^:]*: Base URL\)/);
+    expect(check.unfinished).toEqual(expect.arrayContaining([expect.objectContaining({ nodeId: "chat", message: expect.stringMatching(/base URL/) })]));
   });
 
   it("puts new nodes on the newer behaviours, as the editor does, and keeps a behaviour the model chose", () => {
@@ -371,7 +373,7 @@ describe("checkBuilderDraft", () => {
           { id: "each_item", type: "loop_node", label: "Each item", config: { inputKey: "items" } },
           { id: "tag_item", type: "set_node", label: "Tag item", config: { assignments: [{ key: "tag", valueTemplate: "new" }] } },
           { id: "keep_open", type: "filter_node", label: "Keep open", config: { mode: "gate", conditions: [] } },
-          { id: "post_item", type: "http_request", label: "Post item", config: { urlTemplate: "https://example.com" } }
+          { id: "post_item", type: "http_request", label: "Post item", config: { urlTemplate: "https://acme.dev" } }
         ],
         edges: [
           { source: "incoming", target: "each_item" },
@@ -439,6 +441,42 @@ describe("checkBuilderDraft", () => {
   });
 });
 
+describe("checkBuilderDraft example values", () => {
+  it("leaves example addresses and example settings out and lists those nodes as unfinished", () => {
+    const check = checkBuilderDraft(
+      {
+        name: "Summary to Slack",
+        nodes: [
+          { id: "start", type: "manual_trigger", config: {} },
+          { id: "totals", type: "summarize_node", label: "Totals", config: {} },
+          { id: "notify", type: "slack_send_message", label: "Notify", config: { authType: "webhook", webhookUrl: "https://hooks.slack.com/services/T000/B000/XXX", text: "{{items}}" } },
+          { id: "mail", type: "smtp_send_email", label: "Mail", config: { to: "ops@acme.dev", subject: "Totals", text: "{{items}}" } }
+        ],
+        edges: [
+          { source: "start", target: "totals" },
+          { source: "totals", target: "notify" },
+          { source: "totals", target: "mail" }
+        ]
+      },
+      { workflowId: "wf" }
+    );
+    expect(check.issues).toEqual([]);
+    const config = (id: string) => check.workflow!.nodes.find((node) => node.id === id)!.config as Record<string, unknown>;
+    expect(config("totals")).toMatchObject({ fieldsToSummarize: [{ field: "", aggregation: "sum" }], fieldsToGroupBy: [] });
+    expect(config("notify").webhookUrl).toBe("");
+    // The catalog's smtp.example.com host and from address are not kept; the address the model wrote is.
+    expect(config("mail").to).toBe("ops@acme.dev");
+    expect(JSON.stringify(check.workflow)).not.toMatch(/example\.com|T000/);
+    const byNode = (id: string) => check.unfinished.filter((issue) => issue.nodeId === id).map((issue) => issue.message);
+    expect(byNode("notify")).toEqual(["pick a Slack webhook URL (the draft had the example one)"]);
+    expect(byNode("mail").join()).toMatch(/example address/);
+    expect(byNode("totals").length).toBeGreaterThan(0);
+    const preview = builderPreview(check.workflow!, check);
+    expect(preview.addresses.map((entry) => entry.url).join()).not.toMatch(/example\.com|hooks\.slack/);
+    expect(preview.unfinished.map((issue) => issue.message)).toContain("Notify: pick a Slack webhook URL (the draft had the example one)");
+  });
+});
+
 describe("builderPreview", () => {
   it("lists nodes, the credentials to pick and the addresses the workflow calls", () => {
     const check = checkBuilderDraft(
@@ -447,7 +485,7 @@ describe("builderPreview", () => {
         nodes: [
           { id: "start", type: "manual_trigger", config: {} },
           { id: "notify", type: "slack_send_message", config: { authType: "bot_token", channel: "#ops", text: "hi" } },
-          { id: "fetch", type: "http_request", config: { method: "GET", urlTemplate: "https://status.example.com/api" } }
+          { id: "fetch", type: "http_request", config: { method: "GET", urlTemplate: "https://status.acme.dev/api" } }
         ],
         edges: [
           { source: "start", target: "fetch" },
@@ -459,7 +497,7 @@ describe("builderPreview", () => {
     const preview = builderPreview(check.workflow!, check);
     expect(preview.nodes.map((node) => node.typeLabel)).toEqual(["Manual Trigger", "Slack: Send Message", "HTTP Request"]);
     expect(preview.credentials.some((entry) => entry.nodeId === "notify")).toBe(true);
-    expect(preview.addresses).toEqual(expect.arrayContaining([{ nodeId: "fetch", nodeLabel: "HTTP Request", url: "https://status.example.com/api" }]));
+    expect(preview.addresses).toEqual(expect.arrayContaining([{ nodeId: "fetch", nodeLabel: "HTTP Request", url: "https://status.acme.dev/api" }]));
   });
 });
 
@@ -501,7 +539,7 @@ describe("runWorkflowBuilder", () => {
     expect(result.attempts).toBe(2);
     expect(result.workflow.id).toBe("wf-built");
     expect(result.model).toEqual({ providerId: "openai_compatible", model: "local-model" });
-    expect(result.preview.addresses.map((entry) => entry.url)).toContain("https://shop.example.com/orders");
+    expect(result.preview.addresses.map((entry) => entry.url)).toContain("https://shop.acme.dev/orders");
     expect(model.calls).toHaveLength(4);
     // The rejection went back to the model as a tool result naming the problem.
     const toolMessages = model.calls[3]!.messages.filter((message) => message.role === "tool").map((message) => String(message.content));

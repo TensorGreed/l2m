@@ -21,7 +21,13 @@ const BLANK_FIELDS: Readonly<Record<string, Readonly<Record<string, unknown>>>> 
   a2a_trigger: { agentDescription: "" },
   a2a_agent: { cardUrl: "" },
   human_approval: { approvalMessage: "" },
-  user_prompt: { text: "" }
+  user_prompt: { text: "" },
+  // The field and group-by names, the switch value and its cases, the model server and the Slack webhook are the
+  // person's: the catalog's `amount`/`region`, `{{sentiment}}` cases, `localhost:1234` and `T000/XXX` are examples.
+  summarize_node: { fieldsToSummarize: [{ field: "", aggregation: "sum" }], fieldsToGroupBy: [] },
+  switch_node: { switchValue: "", cases: [] },
+  openai_compatible_chat_model: { baseUrl: "", model: "" },
+  slack_send_message: { webhookUrl: "" }
 };
 
 /** Sample keys a new node leaves out: they only matter once another setting asks for them. */
@@ -47,4 +53,19 @@ export function isKnownTimeZone(zone: string): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * Whether `value` is an example address from the node catalog rather than a real one: an `example.com`/`.org`/`.net`
+ * host or mail domain (and their subdomains), or Slack's documented `T000/B000/XXX` webhook. A run would call it and
+ * fail confusingly, so a described draft leaves it empty and lists the node as unfinished.
+ */
+export function isPlaceholderAddress(value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  const text = value.trim();
+  if (!text) return false;
+  if (/hooks\.slack\.com\/services\/T0+\/B0+\/X+/i.test(text)) return true;
+  if (/^[^\s@]+@(?:[a-z0-9-]+\.)*example\.(?:com|org|net)$/i.test(text)) return true;
+  const host = /^(?:[a-z][a-z0-9+.-]*:\/\/)?([^\s/:?#@]+)(?=[:/?#]|$)/i.exec(text)?.[1] ?? "";
+  return /(?:^|\.)example\.(?:com|org|net)$/i.test(host);
 }
