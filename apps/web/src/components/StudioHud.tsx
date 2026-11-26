@@ -635,7 +635,7 @@ export function StudioHud({
                     className="hud-dropdown-item hud-dropdown-check"
                     role="menuitemcheckbox"
                     aria-checked={recordMcp}
-                    title="Save every MCP call of the next runs into a cassette you can replay offline. Model calls are not recorded."
+                    title="Saves the MCP calls, model calls and memory reads of your next runs, so a replay can reuse them."
                     onClick={() => {
                       setOverflowOpen(false);
                       onToggleRecordMcp();

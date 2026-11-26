@@ -150,7 +150,7 @@ export function McpCassetteViewer({ cassetteId, onClose, onReplay, canDelete = f
                   </p>
                 )}
                 <p className="mcp-cassette-note">
-                  Model calls are not recorded. A replay calls the model again, and answers only MCP calls from the cassette.
+                  A replay from here answers MCP calls from the cassette and calls the model again.
                 </p>
               </div>
 

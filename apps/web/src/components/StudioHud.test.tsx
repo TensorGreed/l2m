@@ -239,6 +239,8 @@ describe("StudioHud", () => {
     await user.click(screen.getByRole("button", { name: "More actions" }));
     const item = screen.getByRole("menuitemcheckbox", { name: "Record MCP calls" });
     expect(item).toHaveAttribute("aria-checked", "false");
+    expect(item).toHaveAttribute("title", expect.stringContaining("model calls"));
+    expect(item.getAttribute("title")).not.toMatch(/not recorded/);
     await user.click(item);
     expect(onToggleRecordMcp).toHaveBeenCalledTimes(1);
 
