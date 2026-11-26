@@ -157,7 +157,7 @@ test.describe("editor drafts and run feedback", () => {
       await openEditor(page, id);
       await expect(page.locator(".hud-run-status .hud-run-label")).toContainText("last run", { timeout: 15_000 });
       await page.locator(".react-flow__node").filter({ hasText: "Order line" }).first().dblclick();
-      await expect(page.getByTestId("run-data-rendered-empty")).toHaveText("Rendered empty: nickname");
+      await expect(page.getByTestId("run-data-rendered-empty")).toHaveText("Rendered empty: {{webhook.customer}}, {{webhook.nickname}}");
     } finally {
       await page.request.delete(`/api/workflows/${id}`);
     }
