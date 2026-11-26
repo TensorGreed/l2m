@@ -207,3 +207,48 @@ describe("unfinishedDraftIssues", () => {
     expect(unfinishedDraftIssues(validateWorkflowGraph(finished))).toEqual([]);
   });
 });
+
+describe("unfinished settings a draft keeps: a knowledge base and summarize fields", () => {
+  const ragFlow = (config: Record<string, unknown>) =>
+    workflowOf(
+      [
+        { id: "start", type: "text_input", name: "Start", position, config: { text: "hello" } },
+        { id: "rag", type: "rag_retrieve", name: "RAG Retrieve", position, config: { queryTemplate: "{{text}}", topK: 3, embedderId: "token-embedder", ...config } },
+        { id: "out", type: "output", name: "Output", position, config: { responseTemplate: "{{context}}" } }
+      ],
+      [
+        { id: "e1", source: "start", target: "rag" },
+        { id: "e2", source: "rag", target: "out" }
+      ]
+    );
+  const codes = (workflow: Workflow) => unfinishedDraftIssues(validateWorkflowGraph(workflow)).map((issue) => issue.code);
+
+  it("lists a Knowledge base search with no knowledge base picked, or a template's placeholder id", () => {
+    expect(codes(ragFlow({ vectorStoreId: "knowledge-base" }))).toContain("missing_rag_knowledge_base");
+    expect(codes(ragFlow({ vectorStoreId: "knowledge-base", vectorStoreConfig: { knowledgeBaseId: "<your-kb-id>" } }))).toContain("missing_rag_knowledge_base");
+    const issue = unfinishedDraftIssues(validateWorkflowGraph(ragFlow({ vectorStoreId: "knowledge-base" }))).find((entry) => entry.code === "missing_rag_knowledge_base");
+    expect(issue).toMatchObject({ nodeId: "rag", message: "RAG Retrieve needs a knowledge base." });
+    // The draft still saves.
+    expect(saveBlockingIssues(validateWorkflowGraph(ragFlow({ vectorStoreId: "knowledge-base" })))).toEqual([]);
+  });
+
+  it("is quiet once a knowledge base is picked, and for the other stores", () => {
+    expect(codes(ragFlow({ vectorStoreId: "knowledge-base", vectorStoreConfig: { knowledgeBaseId: "kb_1" } }))).not.toContain("missing_rag_knowledge_base");
+    expect(codes(ragFlow({ vectorStoreId: "knowledge-base", knowledgeBaseId: "kb_1" }))).not.toContain("missing_rag_knowledge_base");
+    expect(codes(ragFlow({ vectorStoreId: "in-memory-vector-store" }))).not.toContain("missing_rag_knowledge_base");
+  });
+
+  it("lists a Summarize with no field to summarize", () => {
+    const summarize = (fieldsToSummarize: unknown) =>
+      workflowOf(
+        [
+          { id: "start", type: "text_input", name: "Start", position, config: { text: "hello" } },
+          { id: "sum", type: "summarize_node", name: "Totals", position, config: { fieldsToSummarize, inputKey: "items" } }
+        ],
+        [{ id: "e1", source: "start", target: "sum" }]
+      );
+    expect(codes(summarize([{ field: "", aggregation: "sum" }]))).toContain("missing_summarize_fields");
+    expect(codes(summarize(undefined))).toContain("missing_summarize_fields");
+    expect(codes(summarize([{ field: "amount", aggregation: "sum" }]))).not.toContain("missing_summarize_fields");
+  });
+});
