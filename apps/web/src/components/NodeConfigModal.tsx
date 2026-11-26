@@ -7927,6 +7927,7 @@ export function NodeInspector({
             <ExpressionField
               label="Switch Evaluation Value"
               value={toStringValue(config.switchValue, "{{answer}}")}
+              placeholder="{{sentiment}}"
               onChange={(next) => setConfig((current) => ({ ...current, switchValue: next }))}
               rows={2}
               mode="template"
@@ -8584,6 +8585,7 @@ export function NodeInspector({
                     <TextField
                       label="Field"
                       value={toStringValue(row.field)}
+                      placeholder="amount"
                       onChange={(next) =>
                         setConfig((current) => {
                           const rows = Array.isArray(current.fieldsToSummarize)
@@ -8653,6 +8655,7 @@ export function NodeInspector({
                   <TextField
                     label={`Field ${index + 1}`}
                     value={field}
+                    placeholder="region"
                     onChange={(next) =>
                       setConfig((current) => {
                         const rows = Array.isArray(current.fieldsToGroupBy)

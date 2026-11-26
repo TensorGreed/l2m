@@ -1256,6 +1256,17 @@ function validateNodeConfig(workflow: Workflow): WorkflowValidationIssue[] {
       }
     }
 
+    if (node.type === "summarize_node") {
+      const rows = Array.isArray(config.fieldsToSummarize) ? config.fieldsToSummarize : [];
+      if (!rows.some((row) => typeof toRecord(row).field === "string" && String(toRecord(row).field).trim())) {
+        issues.push({
+          code: "missing_summarize_fields",
+          message: `${node.name || "Summarize"} needs a field to summarize.`,
+          nodeId: node.id
+        });
+      }
+    }
+
     if (node.type === "switch_node") {
       if (typeof config.switchValue !== "string" || !config.switchValue.trim()) {
         issues.push({
@@ -1571,6 +1582,7 @@ const DRAFT_SAVEABLE_ISSUE_CODES = new Set([
   "missing_template",
   "missing_switch_value",
   "missing_switch_cases",
+  "missing_summarize_fields",
   "missing_set_node_assignments",
   "invalid_set_node_assignment_key",
   "invalid_set_node_assignment_template",

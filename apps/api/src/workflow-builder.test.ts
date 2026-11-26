@@ -49,7 +49,7 @@ const goodDraft = {
       id: "post_order",
       type: "http_request",
       label: "Post order",
-      config: { method: "POST", urlTemplate: "https://shop.example.com/orders", secretRef: { secretId: "someone-elses-secret" } }
+      config: { method: "POST", urlTemplate: "https://shop.acme.dev/orders", secretRef: { secretId: "someone-elses-secret" } }
     }
   ],
   edges: [{ source: "incoming", target: "post_order" }]
@@ -198,7 +198,7 @@ describe("POST /api/workflow-builder/build", () => {
     expect(hook.config.path).toMatch(/^orders/);
     expect(JSON.stringify(result.workflow)).not.toContain("someone-elses-secret");
     expect(result.preview.notes.join(" ")).toMatch(/credential/);
-    expect(result.preview.addresses.map((entry) => entry.url)).toContain("https://shop.example.com/orders");
+    expect(result.preview.addresses.map((entry) => entry.url)).toContain("https://shop.acme.dev/orders");
 
     // Four model turns, no call after the accepted submission; the tools went with each call.
     expect(modelRequests).toHaveLength(4);

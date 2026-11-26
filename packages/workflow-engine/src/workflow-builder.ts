@@ -22,6 +22,7 @@ import {
   LIVE_ENTRY_NODE_TYPES,
   isReservedNodeId,
   legacyBehaviours,
+  isPlaceholderAddress,
   newNodeBaseConfig,
   publicEntryMessage,
   nodeDefinitions,
@@ -131,7 +132,7 @@ export function settingLabel(path: string): string {
  */
 const BACKGROUND_TRIGGER_TYPES: ReadonlySet<string> = new Set(["file_trigger", "rss_trigger", "sse_trigger", "kafka_trigger", "rabbitmq_trigger", "mqtt_trigger"]);
 
-/** Where a dedicated chat model node sends its calls: the builder leaves these at the node's placeholder. */
+/** Where a dedicated chat model node sends its calls: the builder leaves these as a new node starts (empty, or the default). */
 const MODEL_ADDRESS_KEYS: Readonly<Record<string, readonly string[]>> = {
   openai_compatible_chat_model: ["baseUrl"],
   ollama_chat_model: ["baseUrl"],
@@ -394,6 +395,8 @@ export function checkBuilderDraft(raw: unknown, options: BuilderDraftOptions): B
   const liveTriggerIds: string[] = [];
   const backgroundTriggerIds: string[] = [];
   const removedAddresses: string[] = [];
+  /** Settings that held an example address (`T000/XXX`, `example.com`): left empty, and the node is listed as unfinished. */
+  const exampleAddresses: Array<{ nodeId: string; key: string }> = [];
   let modelChanged = false;
   rawNodes!.forEach((entry, index) => {
     if (!isRecord(entry)) {
@@ -465,10 +468,17 @@ export function checkBuilderDraft(raw: unknown, options: BuilderDraftOptions): B
       }
     }
     for (const key of MODEL_ADDRESS_KEYS[definition.type] ?? []) {
-      if (key in given && given[key] !== (definition.sampleConfig as Record<string, unknown> | undefined)?.[key]) removedAddresses.push(`${id}.${key}`);
-      const placeholder = (definition.sampleConfig as Record<string, unknown> | undefined)?.[key];
-      if (placeholder === undefined) delete config[key];
-      else config[key] = placeholder;
+      const base = sample[key];
+      if (key in given && given[key] !== base && given[key] !== (definition.sampleConfig as Record<string, unknown> | undefined)?.[key]) {
+        removedAddresses.push(`${id}.${key}`);
+      }
+      if (base === undefined) delete config[key];
+      else config[key] = base;
+    }
+    for (const [key, value] of Object.entries(config)) {
+      if (!isPlaceholderAddress(value)) continue;
+      config[key] = "";
+      exampleAddresses.push({ nodeId: id, key });
     }
     if (definition.type === "switch_node") issues.push(...normalizeSwitchCases(id, config));
     // A new node is on the newer behaviours, as one added in the editor is (no "earlier behaviour" notice when the
@@ -558,6 +568,16 @@ export function checkBuilderDraft(raw: unknown, options: BuilderDraftOptions): B
   const validation = validateWorkflowGraph(workflow);
   for (const issue of saveBlockingIssues(validation)) issues.push({ message: issue.message, ...(issue.nodeId ? { nodeId: issue.nodeId } : {}) });
   const unfinished = unfinishedDraftIssues(validation).map((issue) => ({ message: issue.message, ...(issue.nodeId ? { nodeId: issue.nodeId } : {}) }));
+  // A node whose example address was left out is unfinished too, unless it is listed already.
+  for (const { nodeId, key } of exampleAddresses) {
+    if (unfinished.some((issue) => issue.nodeId === nodeId)) continue;
+    const node = byId.get(nodeId);
+    const message =
+      node?.type === "slack_send_message" && key === "webhookUrl"
+        ? "pick a Slack webhook URL (the draft had the example one)"
+        : `set ${settingLabel(key)} (the draft had an example address)`;
+    unfinished.push({ message, nodeId });
+  }
   // A setting the model left out holds the node's example value: say so, so the fix is to set it.
   const pathIssues = unknownTemplatePaths(workflow).map((issue) => {
     const fromExample = !givenKeys.get(issue.nodeId)?.has(issue.setting.split(".")[0]!);
@@ -598,7 +618,7 @@ export function checkBuilderDraft(raw: unknown, options: BuilderDraftOptions): B
   };
   if (removedCredentials.length > 0) notes.push(`Left out credential values the model wrote (${bySettingNode(removedCredentials)}): pick saved credentials on those nodes.`);
   if (removedAdminKeys.length > 0) notes.push(`Left out settings only an admin sets (${bySettingNode(removedAdminKeys)}).`);
-  if (removedAddresses.length > 0) notes.push(`Left the model server address at its placeholder (${bySettingNode(removedAddresses)}): set your server on those nodes.`);
+  if (removedAddresses.length > 0) notes.push(`Left out the model server address the model wrote (${bySettingNode(removedAddresses)}): set your server on those nodes.`);
   if (modelChanged) notes.push("Model nodes use the model the builder used; change it on each node if you want another one.");
   return { workflow, issues, unfinished, pathIssues, notes };
 }
