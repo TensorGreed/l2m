@@ -354,6 +354,7 @@ export default defineConfig({
           { text: "Testing + Quality Gates", link: "/operations/testing-and-quality" },
           { text: "Observability (logs, metrics)", link: "/operations/observability" },
           { text: "OpenTelemetry", link: "/operations/opentelemetry" },
+          { text: "Langfuse, Phoenix, LangSmith", link: "/operations/tracing-backends" },
           { text: "Postgres", link: "/operations/postgres" },
           { text: "Queue and workers", link: "/operations/queue-and-workers" },
           { text: "Cluster operations", link: "/operations/cluster" },
