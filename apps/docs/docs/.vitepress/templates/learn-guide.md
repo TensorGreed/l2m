@@ -1,5 +1,5 @@
 ---
-# Copy to docs/learn/<track>/<slug>.md (track: mcp, agents, security, testing, operations). The slug
+# Copy to docs/learn/<track>/<slug>.md (track: an id from .vitepress/site/tracks.ts). The slug
 # must be listed in that track's `pages` in .vitepress/site/tracks.ts (the planned slugs already are).
 # Never rename a published slug: GitHub Pages cannot redirect. The build fails without title,
 # description and level.

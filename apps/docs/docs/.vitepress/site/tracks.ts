@@ -39,7 +39,7 @@ export const TRACKS: Track[] = [
     shortTitle: "MCP fundamentals",
     summary: "What MCP is, its host, client and server roles, tools, resources and prompts, the transports, OAuth for remote servers, and tool annotations.",
     level: "beginner",
-    pages: ["what-is-mcp", "hosts-clients-servers", "tools-resources-prompts", "transports", "authorization", "tool-annotations", "mcp-vs-function-calling", "mcp-vs-rest-api", "mcp-vs-a2a"],
+    pages: ["what-is-mcp", "hosts-clients-servers", "tools-resources-prompts", "transports", "authorization", "tool-annotations", "mcp-vs-function-calling", "mcp-vs-rest-api", "mcp-vs-a2a", "mcp-interview-questions"],
     next: "/learn/security/mcp-security-risks"
   },
   {
@@ -49,6 +49,24 @@ export const TRACKS: Track[] = [
     summary: "The tool-calling loop in code, when a fixed workflow beats an agent, supervisor, worker and remote agents, memory, tool design and human approval.",
     level: "beginner",
     pages: ["what-is-an-ai-agent", "agent-loop-in-code", "workflows-vs-agents", "supervisor-and-workers", "remote-agents-over-a2a", "agent-memory", "too-many-tools", "designing-tools-for-agents", "human-in-the-loop", "agent-vs-chatbot", "rag-vs-fine-tuning", "rag-vs-long-context"],
+    next: "patterns"
+  },
+  {
+    id: "patterns",
+    title: "AI orchestration patterns",
+    shortTitle: "Orchestration patterns",
+    summary: "How to arrange model calls, tools and people: chaining, routing, parallel steps, orchestrator and workers, review loops and retries.",
+    level: "beginner",
+    pages: ["what-is-ai-orchestration"],
+    next: "effective-ai"
+  },
+  {
+    id: "effective-ai",
+    title: "Using AI models well",
+    shortTitle: "Using AI well",
+    summary: "Prompting, context, sampling settings, structured output, model choice and cost: the habits that make model calls reliable.",
+    level: "beginner",
+    pages: ["prompt-engineering-vs-context-engineering", "zero-shot-vs-few-shot-prompting", "temperature-vs-top-p", "json-mode-vs-structured-outputs"],
     next: "security"
   },
   {
@@ -76,6 +94,33 @@ export const TRACKS: Track[] = [
     summary: "A production checklist, LLM and MCP gateways, cost caps, signed webhooks, self-hosting, retention, audit trails, and identity: SSO, MFA, roles and keys.",
     level: "intermediate",
     pages: ["production-checklist-for-ai-agents", "llm-gateway-vs-mcp-gateway", "llm-cost-control", "webhooks-and-schedules-for-agents", "self-hosting-ai-agents", "ai-data-retention-and-erasure", "audit-trails-for-agents", "identity-for-ai-platforms", "opentelemetry-genai-conventions", "opentelemetry-collector-for-agents", "tracing-vs-logging-for-llm-apps", "rate-limits-vs-budgets", "openai-compatible-api-gateway", "sso-vs-scim", "saml-vs-oidc", "oidc-sso-with-keycloak", "saml-sso-setup"],
+    next: "governance"
+  },
+  {
+    id: "governance",
+    title: "AI governance",
+    shortTitle: "AI governance",
+    summary: "The rules and standards for AI systems, the EU AI Act, NIST AI RMF and ISO/IEC 42001, and the approvals and records that put them into practice.",
+    level: "intermediate",
+    pages: ["eu-ai-act-risk-levels", "nist-ai-rmf-vs-iso-42001"],
+    next: "data-protection"
+  },
+  {
+    id: "data-protection",
+    title: "Data protection for AI",
+    shortTitle: "Data protection",
+    summary: "Personal data, PII, anonymisation, retention and secrets: the general data protection ideas every AI system has to handle.",
+    level: "intermediate",
+    pages: ["pii-vs-personal-data", "anonymization-vs-pseudonymization"],
+    next: "tools"
+  },
+  {
+    id: "tools",
+    title: "AI tools explained",
+    shortTitle: "AI tools",
+    summary: "Neutral explainers of the tools around AI apps: vector databases, embeddings, model providers, observability and agent frameworks.",
+    level: "beginner",
+    pages: ["what-is-a-vector-database", "cosine-similarity-vs-dot-product"],
     next: "mcp-servers"
   },
   {

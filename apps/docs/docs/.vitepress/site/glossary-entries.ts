@@ -421,5 +421,90 @@ export const INDEX_ENTRIES: IndexEntry[] = [
     topic: "operations",
     definition: "A record of every tool call an agent or client makes: which tool, how long it took, whether it failed, and what it cost.",
     docs: "/product/mcp-tool-call-telemetry"
+  },
+  // Using models, retrieval, governance and data protection (Learn library, week 1)
+  {
+    slug: "ai-orchestration",
+    term: "AI orchestration",
+    topic: "agents",
+    definition: "Coordinating model calls, tools, code and people so they do a job together: which step runs when, what each step gets, and what happens when one fails."
+  },
+  {
+    slug: "context-engineering",
+    term: "Context engineering",
+    topic: "agents",
+    definition: "Choosing everything a model sees on a call, not just the instructions: the system prompt, examples, retrieved documents, tool definitions, tool results and history."
+  },
+  {
+    slug: "few-shot-prompting",
+    term: "Few-shot prompting",
+    topic: "agents",
+    definition: "Putting a few worked examples of input and the wanted output into the prompt, so the model copies their format and decisions. With no examples, it is zero-shot."
+  },
+  {
+    slug: "temperature",
+    term: "Temperature (sampling)",
+    topic: "agents",
+    definition: "A setting that reshapes the model's next-token probabilities before one is picked: lower values favour the likeliest tokens, higher values spread the choice out."
+  },
+  {
+    slug: "top-p",
+    term: "Top-p (nucleus sampling)",
+    topic: "agents",
+    definition: "A setting that keeps only the smallest set of likeliest next tokens whose probabilities add up to at least p, and picks among those."
+  },
+  {
+    slug: "structured-output",
+    term: "Structured output",
+    topic: "agents",
+    definition: "Model output in a machine-readable format, usually JSON, ideally constrained to a JSON Schema you supply so a program can parse it without guessing."
+  },
+  {
+    slug: "embedding",
+    term: "Embedding",
+    topic: "agents",
+    definition: "A list of numbers (a vector) that a model produces for a piece of text or an image, placed so that similar meanings end up close together."
+  },
+  {
+    slug: "cosine-similarity",
+    term: "Cosine similarity",
+    topic: "agents",
+    definition: "How closely two vectors point the same way: their dot product divided by the product of their lengths, from -1 (opposite) to 1 (same direction)."
+  },
+  {
+    slug: "eu-ai-act",
+    term: "EU AI Act",
+    topic: "operations",
+    definition: "Regulation (EU) 2024/1689, the European Union's law on AI. It sorts AI uses by risk: some are banned, high-risk ones carry duties, and some need transparency."
+  },
+  {
+    slug: "nist-ai-rmf",
+    term: "NIST AI RMF",
+    topic: "operations",
+    definition: "The AI Risk Management Framework (NIST AI 100-1), a voluntary US framework for managing AI risks, built on four functions: Govern, Map, Measure and Manage."
+  },
+  {
+    slug: "iso-42001",
+    term: "ISO/IEC 42001",
+    topic: "operations",
+    definition: "An international standard for an AI management system: the policies, roles, risk assessments and reviews an organisation runs, which can be audited and certified."
+  },
+  {
+    slug: "personal-data",
+    term: "Personal data",
+    topic: "security",
+    definition: "Under the GDPR, any information relating to an identified or identifiable natural person, directly or indirectly, such as by a name, an ID number or an online identifier."
+  },
+  {
+    slug: "pseudonymisation",
+    term: "Pseudonymisation",
+    topic: "security",
+    definition: "Replacing identifying details so data cannot be tied to a person without extra information kept separately. Under the GDPR, pseudonymised data is still personal data."
+  },
+  {
+    slug: "anonymisation",
+    term: "Anonymisation",
+    topic: "security",
+    definition: "Processing data so that no one can identify the person any more, by any means reasonably likely to be used. Truly anonymous data is outside the GDPR."
   }
 ];
