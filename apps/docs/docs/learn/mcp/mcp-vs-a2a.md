@@ -11,7 +11,7 @@ related: [model-context-protocol, mcp-tool, supervisor-agent, worker-agent, ai-a
 
 # MCP vs A2A
 
-The <Term id="model-context-protocol">Model Context Protocol</Term> (MCP) connects an AI application to tools and data: the application lists a server's tools and calls them, one request and one result at a time. The Agent2Agent protocol (A2A) connects one agent to another agent that it treats as an independent peer: the caller finds the remote agent through a published Agent Card, sends it a message, and usually follows a task that can run for a long time, ask for more input and produce artifacts. The A2A specification puts it plainly: "A2A and MCP are complementary protocols designed for different aspects of agentic systems." A tool is something your agent uses. A remote agent is something your agent asks. L2M implements MCP; it does not implement A2A.
+The <Term id="model-context-protocol">Model Context Protocol</Term> (MCP) connects an AI application to tools and data: the application lists a server's tools and calls them, one request and one result at a time. The Agent2Agent protocol (A2A) connects one agent to another agent that it treats as an independent peer: the caller finds the remote agent through a published Agent Card, sends it a message, and usually follows a task that can run for a long time, ask for more input and produce artifacts. The A2A specification puts it plainly: "A2A and MCP are complementary protocols designed for different aspects of agentic systems." A tool is something your agent uses. A remote agent is something your agent asks. L2M implements both.
 
 ## What sits on the other end
 
@@ -93,12 +93,13 @@ There is also a simpler bridge that only needs MCP: **wrap an agent as an MCP to
 
 ## In L2M
 
-L2M does not implement A2A. It does not publish Agent Cards or serve A2A endpoints, and it has no A2A client: it cannot discover A2A agents or follow their tasks. Agent-to-agent work in L2M goes through two mechanisms, both built on tools:
+L2M speaks both protocols: MCP for tools, and A2A 1.0 over the JSON-RPC binding (agents that still speak 0.3 work too) for agents in other systems ([A2A agents](/runtime/a2a-agents)). Agent-to-agent work goes through three mechanisms:
 
 - **Inside one workflow: supervisor and workers.** A Supervisor node's `worker` port takes Agent Orchestrator or Supervisor nodes. Each worker reaches the supervisor's model as a synthetic tool, `delegate_to_<worker name>`, with one argument, `task_prompt`. Calling it runs the worker's own agent loop with its own chat model, tools and memory, and the worker's output comes back as the tool result. No protocol is involved: the runtime routes the call in process.
-- **Across systems: workflows as MCP tools.** An **Expose as MCP Tool** trigger turns a workflow, agents inside included, into an MCP tool that the [MCP gateway](/product/mcp-gateway) serves to other MCP clients, such as an IDE agent or another L2M instance ([workflow as an MCP tool](/runtime/workflow-as-mcp-tool)). Each caller uses its own client token. This is the "wrap an agent as an MCP tool" bridge from the previous section, with its limits: one call is one run, the gateway reports a progress step per completed node, and the caller gets the workflow's output as the tool result.
+- **Across systems, over A2A.** An **Expose as A2A Agent** trigger publishes a workflow as an A2A agent, with a public Agent Card and a JSON-RPC endpoint behind an API key, a bearer token or no auth. Each task is one run of the workflow. An **A2A Agent** node calls a remote A2A agent, as a step or as a worker on a Supervisor, with a timeout that cancels the remote task. [Remote agents over A2A](/learn/agents/remote-agents-over-a2a) covers doing both safely.
+- **Across systems, as MCP tools.** An **Expose as MCP Tool** trigger turns a workflow, agents inside included, into an MCP tool that the [MCP gateway](/product/mcp-gateway) serves to other MCP clients, such as an IDE agent ([workflow as an MCP tool](/runtime/workflow-as-mcp-tool)). This is the "wrap an agent as an MCP tool" bridge from the previous section, with its limits: one call is one run, and the caller gets the workflow's output as the tool result.
 
-In the other direction, an L2M agent can reach a remote agent in two ways. If the agent is served as an MCP tool, attach it as an MCP Tool node. If it has an HTTP API, wrap the call in a small workflow with an HTTP Request node and attach that workflow with a [Workflow Tool](/runtime/workflow-tool) node; each call is then one request and one response, with none of A2A's task handling. Either way it is governed like any other tool: [tool policy](/product/mcp-tool-policy) can deny it or require approval, and calls are recorded in [tool-call telemetry](/product/mcp-tool-call-telemetry).
+Either way the remote side is governed like any other tool or run: [tool policy](/product/mcp-tool-policy) can deny a tool or require approval, a delegation to an A2A worker asks for approval when the workflow's **Ask before write tools** setting is on (unless the node is marked read-only), and [budgets](/product/budgets) apply to every run.
 
 ## Try it in L2M
 
@@ -110,4 +111,5 @@ Open the research team in the [live demo](https://lsquarem.com/demo/?mode=editor
 - [MCP specification 2025-11-25: Architecture](https://modelcontextprotocol.io/specification/2025-11-25/architecture) (modelcontextprotocol.io)
 - [MCP specification 2025-11-25: Tools](https://modelcontextprotocol.io/specification/2025-11-25/server/tools) (modelcontextprotocol.io)
 - [MCP specification 2026-07-28: Key changes](https://modelcontextprotocol.io/specification/2026-07-28/changelog) (modelcontextprotocol.io)
-- Related guides: [Supervisor and worker agents](/learn/agents/supervisor-and-workers), [MCP vs function calling](/learn/mcp/mcp-vs-function-calling), [MCP hosts, clients and servers](/learn/mcp/hosts-clients-servers)
+- Related guides: [Remote agents over A2A](/learn/agents/remote-agents-over-a2a), [Supervisor and worker agents](/learn/agents/supervisor-and-workers), [MCP vs function calling](/learn/mcp/mcp-vs-function-calling), [MCP hosts, clients and servers](/learn/mcp/hosts-clients-servers)
+- In L2M: [A2A agents](/runtime/a2a-agents), [Workflow as an MCP tool](/runtime/workflow-as-mcp-tool)

@@ -46,9 +46,9 @@ export const TRACKS: Track[] = [
     id: "agents",
     title: "How AI agents work",
     shortTitle: "AI agents",
-    summary: "The tool-calling loop, when a fixed workflow beats an agent, supervisor and worker agents, memory, long tool lists and human approval.",
+    summary: "The tool-calling loop in code, when a fixed workflow beats an agent, supervisor, worker and remote agents, memory, tool design and human approval.",
     level: "beginner",
-    pages: ["what-is-an-ai-agent", "workflows-vs-agents", "supervisor-and-workers", "agent-memory", "too-many-tools", "human-in-the-loop", "agent-vs-chatbot", "rag-vs-fine-tuning", "rag-vs-long-context"],
+    pages: ["what-is-an-ai-agent", "agent-loop-in-code", "workflows-vs-agents", "supervisor-and-workers", "remote-agents-over-a2a", "agent-memory", "too-many-tools", "designing-tools-for-agents", "human-in-the-loop", "agent-vs-chatbot", "rag-vs-fine-tuning", "rag-vs-long-context"],
     next: "security"
   },
   {
@@ -73,9 +73,9 @@ export const TRACKS: Track[] = [
     id: "operations",
     title: "Running AI in production",
     shortTitle: "Running in production",
-    summary: "LLM and MCP gateways, cost caps, self-hosting, retention and erasure, audit trails, and identity: SSO, MFA, roles and keys.",
+    summary: "A production checklist, LLM and MCP gateways, cost caps, signed webhooks, self-hosting, retention, audit trails, and identity: SSO, MFA, roles and keys.",
     level: "intermediate",
-    pages: ["llm-gateway-vs-mcp-gateway", "llm-cost-control", "self-hosting-ai-agents", "ai-data-retention-and-erasure", "audit-trails-for-agents", "identity-for-ai-platforms", "opentelemetry-genai-conventions", "opentelemetry-collector-for-agents", "tracing-vs-logging-for-llm-apps", "rate-limits-vs-budgets", "openai-compatible-api-gateway", "sso-vs-scim", "saml-vs-oidc", "oidc-sso-with-keycloak", "saml-sso-setup"],
+    pages: ["production-checklist-for-ai-agents", "llm-gateway-vs-mcp-gateway", "llm-cost-control", "webhooks-and-schedules-for-agents", "self-hosting-ai-agents", "ai-data-retention-and-erasure", "audit-trails-for-agents", "identity-for-ai-platforms", "opentelemetry-genai-conventions", "opentelemetry-collector-for-agents", "tracing-vs-logging-for-llm-apps", "rate-limits-vs-budgets", "openai-compatible-api-gateway", "sso-vs-scim", "saml-vs-oidc", "oidc-sso-with-keycloak", "saml-sso-setup"],
     next: "mcp-servers"
   },
   {
