@@ -440,7 +440,7 @@ export function registerA2aRoutes(deps: A2aRoutesDeps): void {
       reply.raw.write(`data: ${JSON.stringify(a2aJsonRpcResult(id, legacy ? toLegacyStreamEvent(event) : event))}\n\n`);
     };
     reply.hijack();
-    reply.raw.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive" });
+    reply.raw.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive", "X-Accel-Buffering": "no" });
     if (typeof reply.raw.flushHeaders === "function") reply.raw.flushHeaders();
     const stopHeartbeat = startSseHeartbeat(reply.raw, deps.config.SSE_HEARTBEAT_INTERVAL_MS, () => streamClosed);
     send({ task: { ...ids, status: { state: "TASK_STATE_SUBMITTED", timestamp: new Date().toISOString() }, history: [sent] } });

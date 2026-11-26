@@ -14194,7 +14194,9 @@ button{padding:10px 16px;background:#2b6cb0;color:#fff;border:none;border-radius
     reply.raw.writeHead(200, {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive"
+      Connection: "keep-alive",
+      // A proxy in front (the Docker image's nginx) passes each event on at once instead of buffering the stream.
+      "X-Accel-Buffering": "no"
     });
     if (typeof reply.raw.flushHeaders === "function") {
       reply.raw.flushHeaders();

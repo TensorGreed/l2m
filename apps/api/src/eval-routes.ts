@@ -642,7 +642,7 @@ export function registerEvalRoutes(deps: EvalRoutesDeps): void {
       reply.raw.write(`event: ${event}\ndata: ${JSON.stringify({ type: event, run: payload })}\n\n`);
     };
     reply.hijack();
-    reply.raw.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive" });
+    reply.raw.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive", "X-Accel-Buffering": "no" });
     if (typeof reply.raw.flushHeaders === "function") reply.raw.flushHeaders();
 
     let unsubscribe: (() => void) | null = null;
