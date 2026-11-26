@@ -123,13 +123,30 @@ On the **Runs** page, expanding a finished run shows its signed manifest (digest
 
 ## Verifying a bundle offline
 
-The `l2m` command line verifies bundles without contacting any server:
+The `l2m` command line verifies bundles without contacting any server. From the release after v0.1.1 it ships in the API image, so Docker is all you need. Run it in the folder that holds the bundle and the public key:
+
+```bash
+docker run --rm -v "$PWD:/work:ro" -w /work ghcr.io/tensorgreed/l2m:<version> \
+  l2m audit verify l2m-audit-<id>.zip --public-key audit-key.pub.pem
+```
+
+Inside a running compose stack, copy the files into the API container first, then run it there:
+
+```bash
+docker compose cp l2m-audit-<id>.zip api:/tmp/
+docker compose cp audit-key.pub.pem api:/tmp/
+docker compose exec api l2m audit verify /tmp/l2m-audit-<id>.zip --public-key /tmp/audit-key.pub.pem
+```
+
+From a checkout of the repository, run it with pnpm. This works with any release:
 
 ```bash
 pnpm l2m audit verify l2m-audit-<id>.zip --public-key audit-key.pub.pem
 pnpm l2m audit verify l2m-audit-<id>.zip --public-key MCowBQYDK2VwAyEA… --json
 pnpm l2m audit verify big-run.zip --public-key audit-key.pub.pem --max-bytes 2147483648
 ```
+
+The options are the same in every form.
 
 `--public-key` takes a file or an inline value: a PEM public key, the base64 of the raw 32-byte key, or the base64 of its DER encoding.
 
