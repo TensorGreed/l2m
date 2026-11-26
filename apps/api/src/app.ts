@@ -90,7 +90,8 @@ import {
   type WorkflowNode,
   WorkflowError,
   WORKFLOW_TOOL_ADAPTER_ID,
-  defaultRagSearchMode
+  defaultRagSearchMode,
+  withAutoTypedSetFields
 } from "@ai-orchestrator/shared";
 import { diffWorkflows } from "@ai-orchestrator/shared";
 import { BUDGET_SCOPE_TYPES, isBudgetScopeType, readTraceCarrier, repairWorkflowErrorConfigs, type BudgetScopeType } from "@ai-orchestrator/shared";
@@ -11638,9 +11639,12 @@ export async function createApp(
         details: parsed.error.issues
       };
     }
+    // A new workflow from a script or by hand starts on the newer Set behaviour (untyped fields are auto); one that
+    // overwrites a stored workflow keeps its fields as sent.
+    const created = (await store.getWorkflow(parsed.data.id)) ? parsed.data : withAutoTypedSetFields(parsed.data);
 
     // A draft saves with unfinished node settings (the editor shows them as warnings); a broken graph does not.
-    const validation = validateWorkflowGraph(parsed.data);
+    const validation = validateWorkflowGraph(created);
     const blocking = saveBlockingIssues(validation);
     if (blocking.length > 0) {
       reply.code(400);
@@ -11650,10 +11654,10 @@ export async function createApp(
       };
     }
 
-    const saveDenial = await workflowSaveDenial(user, parsed.data);
+    const saveDenial = await workflowSaveDenial(user, created);
     if (saveDenial) return denyRunAccess(reply, saveDenial);
 
-    const savedWorkflow = await store.upsertWorkflow(parsed.data, { createdBy: user.id });
+    const savedWorkflow = await store.upsertWorkflow(created, { createdBy: user.id });
     await workflowVersionService.snapshot({ workflow: savedWorkflow, createdBy: user.id, changeNote: "created" });
     await workflowChanged(savedWorkflow.id);
     await audit(request, user, {
@@ -11911,10 +11915,13 @@ export async function createApp(
     }
 
     try {
-      const workflow = parsed.data.json
-        ? importWorkflowFromJson(parsed.data.json)
-        : // Like the JSON path: invalid stored error settings are left out (and reported by validation), not refused.
-          workflowSchema.parse(repairWorkflowErrorConfigs(parsed.data.workflow).workflow);
+      // A file L2M never saved (no createdAt) starts on the newer Set behaviour; an export of a stored workflow keeps its own.
+      const workflow = withAutoTypedSetFields(
+        parsed.data.json
+          ? importWorkflowFromJson(parsed.data.json)
+          : // Like the JSON path: invalid stored error settings are left out (and reported by validation), not refused.
+            workflowSchema.parse(repairWorkflowErrorConfigs(parsed.data.workflow).workflow)
+      );
 
       const validation = validateWorkflowGraph(workflow);
       const blocking = saveBlockingIssues(validation);

@@ -45,6 +45,39 @@ describe("templates without strict mode (the default)", () => {
     expect(result.nodeResults.find((node) => node.nodeId === "set")?.output).toEqual({ value: "<>" });
   });
 
+  it("record a rendered-empty warning in the node's run data, and the node still succeeds", async () => {
+    const result = await executeWorkflow({ workflow: setWorkflow("<{{customer.name}}> {{customer.name}} {{user_prompt}}") }, dependencies());
+    expect(result.status).toBe("success");
+    const set = result.nodeResults.find((node) => node.nodeId === "set");
+    expect(set?.status).toBe("success");
+    // Named once; the run's optional prompt fields are not reported.
+    expect(set?.renderedEmpty).toEqual(["customer.name"]);
+    expect(set?.warnings).toEqual([expect.stringContaining("Rendered empty: {{customer.name}}")]);
+    // The node that rendered every value has no warning.
+    const start = result.nodeResults.find((node) => node.nodeId === "start");
+    expect(start?.renderedEmpty).toBeUndefined();
+    expect(start?.warnings).toBeUndefined();
+  });
+
+  it("record nothing when every value is there, or a field holds null", async () => {
+    const workflow = setWorkflow("<{{text}}>");
+    workflow.nodes[1]!.config = { assignments: [{ key: "value", valueTemplate: "<{{text}}>" }, { key: "empty", valueTemplate: "{{nothing}}", type: "auto" }] };
+    workflow.nodes.splice(1, 0, { id: "nulls", type: "set_node", name: "Nulls", position, config: { assignments: [{ key: "text", valueTemplate: "{{text}}" }, { key: "nothing", valueTemplate: "null", type: "json" }] } });
+    workflow.edges = [{ id: "e1", source: "start", target: "nulls" }, { id: "e2", source: "nulls", target: "set" }];
+    const result = await executeWorkflow({ workflow }, dependencies());
+    expect(result.status).toBe("success");
+    expect(result.nodeResults.find((node) => node.nodeId === "set")?.renderedEmpty).toBeUndefined();
+  });
+
+  it("name the missing {{ }} of an auto-typed field too", async () => {
+    const workflow = setWorkflow("x");
+    workflow.nodes[1]!.config = { assignments: [{ key: "value", valueTemplate: "{{ customer.age }}", type: "auto" }] };
+    const result = await executeWorkflow({ workflow }, dependencies());
+    const set = result.nodeResults.find((node) => node.nodeId === "set");
+    expect(set?.output).toEqual({ value: null });
+    expect(set?.renderedEmpty).toEqual(["customer.age"]);
+  });
+
   it("list what rendered nothing, so the editor can warn about it", () => {
     const { rendered, missing } = renderTemplateAdvanced("{{a}}-{{b.c}}-{{n}}-{{ $json.x.y }}-{{ a + 1 }}", { a: 1, b: {}, n: null });
     expect(rendered).toBe("1---" + "-2");

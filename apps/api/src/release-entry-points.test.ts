@@ -80,6 +80,7 @@ const WORKFLOW_LOADS: LoadSite[] = [
   { file: "db/postgres-store.ts", match: "", kind: "not_run", why: "the Postgres store's own internals (the delegations to db/postgres/*)", count: 3 },
   { file: "db/postgres/workflows.ts", match: "", kind: "not_run", why: "the Postgres store's workflow internals (getWorkflow, upsert, delete, getWorkflowVersion)", count: 4 },
   { file: "services/legal-hold-service.ts", match: "store.getWorkflow(input.scopeId", kind: "not_run", why: "a workflow hold checks the workflow exists and reads its project; nothing runs" },
+  { file: "app.ts", match: "const created = (await store.getWorkflow(parsed.data.id))", kind: "not_run", why: "creating a workflow checks whether its id is stored already (a new one gets typed Set fields); nothing runs" },
   { file: "a2a-routes.ts", match: "const workflow = await deps.loadProductionWorkflow(summary.id);", kind: "production", why: "the A2A agent lookup (card and endpoint): production's version, unfinished included (a call answers workflow_unfinished)" },
   { file: "mcp-safety-preset-routes.ts", match: "", kind: "not_run", why: "the untrusted-write switch only checks the workflow exists and reads its project for access" },
   { file: "db/postgres/data-destinations.ts", match: "", kind: "not_run", why: "the Postgres store's destination-scan stub, not a workflow run", count: 1 },
