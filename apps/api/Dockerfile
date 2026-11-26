@@ -64,6 +64,9 @@ COPY packages/guard-sdk/package.json packages/guard-sdk/
 COPY packages/community-sdk/package.json packages/community-sdk/
 COPY packages/otel/package.json packages/otel/
 COPY packages/a2a-sdk/package.json packages/a2a-sdk/
+# The l2m command line (`l2m audit verify` and the other offline checks), so it runs from the image. Its l2m-ner
+# dependency (ONNX runtime) is left out: the CLI loads it only for `l2m models`, which the l2m-ner image runs.
+COPY packages/cli/package.json packages/cli/
 
 FROM toolchain AS deps
 RUN pnpm install --frozen-lockfile
@@ -81,7 +84,7 @@ RUN pnpm --filter @ai-orchestrator/api exec tsc -p tsconfig.image.json --noEmit 
 
 # ---------- production dependencies ----------
 FROM toolchain AS prod-deps
-RUN pnpm install --prod --frozen-lockfile --filter "@ai-orchestrator/api..."
+RUN pnpm install --prod --frozen-lockfile --filter "@ai-orchestrator/api..." --filter "@ai-orchestrator/cli"
 
 # ---------- runtime stage ----------
 FROM ghcr.io/astral-sh/uv:0.13.8@sha256:5cc1805e2426484abca4ad46ea783bab281fdb225fd82d8ce6d66a81254bac85 AS uv
@@ -102,7 +105,9 @@ RUN apk upgrade --no-cache zlib \
     && npm install --global corepack@0.36.0 \
     && corepack enable \
     && addgroup -S nodeuser \
-    && adduser -S nodeuser -G nodeuser
+    && adduser -S nodeuser -G nodeuser \
+    && printf '#!/bin/sh\nexec node /app/packages/cli/bin/l2m.mjs "$@"\n' > /usr/local/bin/l2m \
+    && chmod 0755 /usr/local/bin/l2m
 
 COPY --from=uv /uv /uvx /usr/local/bin/
 
