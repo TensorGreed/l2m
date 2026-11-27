@@ -50,7 +50,7 @@ pnpm dev
 4. Click **Run workflow** (the play button at the top right). The run takes a moment; the status next to the workflow name then reads **last run** with the number of nodes that ran, all **ok**.
 5. Double-click a node, such as **Units per region**, to see what went in and what came out.
 
-Closed the welcome window? **Home** lists the same **Starters** first: click **Use** on one. To build your own, click **Describe it…** on **Home** (it needs a model key, added under **Secrets**) or **New workflow**. See [Starter templates](./starter-templates.md).
+Closed the welcome window? **Home** shows three **New** cards (Chat agent, Automation, Ask your documents) and then the same **Starters**: click **Use** on one. To build your own, click **Describe it…** on **Home** (it needs a model key, added under **Secrets**) or **New workflow**. See [Starter templates](./starter-templates.md).
 
 ## Run the released images
 

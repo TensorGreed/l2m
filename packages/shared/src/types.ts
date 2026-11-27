@@ -401,6 +401,12 @@ export interface NodeExecutionResult {
   output?: unknown;
   error?: string;
   warnings?: string[];
+  /**
+   * The `{{ }}` of this node's settings that had no value and rendered empty (their bodies, such as `customer.name`),
+   * when strict templates are off. The node still succeeds; run data shows them so a typo is seen. Each is also in
+   * `warnings`.
+   */
+  renderedEmpty?: string[];
   retriedNodes?: Array<{ nodeId: string; attempts: number; nodeType: string }>;
   errorCategory?: string;
   /** A stable code for errors callers may act on (such as `workflow_unfinished`), when the error has one. */

@@ -4316,7 +4316,7 @@ function EvalDatasetDetail({
             {recordedRuns.length === 0 && mcpMode !== "record"
               ? "Record a run first to replay it. "
               : ""}
-            Model calls are not recorded, so replayed runs still call your model.
+            Replayed runs answer MCP calls from the cassette and still call your model.
           </small>
         </fieldset>
         {error && <div className="error-banner">{error}</div>}

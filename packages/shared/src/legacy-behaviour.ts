@@ -129,3 +129,22 @@ export function restoreOldBehaviour(nodeType: string, config: Record<string, unk
       return next;
   }
 }
+
+/**
+ * A workflow that reaches L2M for the first time (written by hand, by a script or by another tool: it has no
+ * `createdAt`) starts on the newer Set behaviour, as one built in the editor does: its fields saved without a type are
+ * `auto` (a number stays a number). A workflow L2M saved before, or an export of one (it carries `createdAt`), keeps its
+ * fields as they are, and the editor offers the upgrade.
+ */
+export function withAutoTypedSetFields<T extends { createdAt?: string; nodes: Array<{ type: string; config?: unknown }> }>(workflow: T): T {
+  if (workflow.createdAt) return workflow;
+  let changed = false;
+  const nodes = workflow.nodes.map((node) => {
+    if (node.type !== "set_node") return node;
+    const config = node.config && typeof node.config === "object" ? (node.config as Record<string, unknown>) : {};
+    if (!legacyBehaviours("set_node", config).includes("set_text")) return node;
+    changed = true;
+    return { ...node, config: upgradeToNewBehaviour("set_node", config, ["set_text"]) };
+  });
+  return changed ? { ...workflow, nodes } : workflow;
+}

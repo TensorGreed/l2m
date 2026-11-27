@@ -406,7 +406,9 @@ export function registerExecutionRoutes(deps: ExecutionRoutesDeps): void {
     reply.raw.writeHead(200, {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive"
+      Connection: "keep-alive",
+      // A proxy in front (the Docker image's nginx) passes each event on at once instead of buffering the stream.
+      "X-Accel-Buffering": "no"
     });
     if (typeof reply.raw.flushHeaders === "function") {
       reply.raw.flushHeaders();
@@ -626,7 +628,7 @@ export function registerExecutionRoutes(deps: ExecutionRoutesDeps): void {
       reply.raw.write("\n");
     };
     reply.hijack();
-    reply.raw.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive" });
+    reply.raw.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive", "X-Accel-Buffering": "no" });
     if (typeof reply.raw.flushHeaders === "function") reply.raw.flushHeaders();
     let finish: () => void = () => undefined;
     const stopHeartbeat = startSseHeartbeat(reply.raw, config.SSE_HEARTBEAT_INTERVAL_MS, () => closed, deps.streamSessionWatch?.(request, () => finish()));

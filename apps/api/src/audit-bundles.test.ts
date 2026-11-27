@@ -742,6 +742,7 @@ describe("audit bundle export", () => {
     expect(names).toEqual(expect.arrayContaining(["workflow.json", "execution/run.json", "execution/trace.json", "execution/logs.jsonl"]));
     expect(names.some((name) => /^execution\/nodes\/\d{3}-agent\.json$/.test(name))).toBe(true);
     expect(files.get("README.txt")!.toString("utf8")).toContain("l2m audit verify");
+    expect(files.get("README.txt")!.toString("utf8")).toContain("ghcr.io/tensorgreed/l2m \\\n     l2m audit verify");
 
     // workflow.json hashes to the manifest's workflow hash.
     const manifest = JSON.parse(files.get("manifest.json")!.toString("utf8")) as { workflow: { hash: string }; nodes: Array<{ id: string; outputDigest: string | null }> };

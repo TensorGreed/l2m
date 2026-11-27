@@ -1,4 +1,6 @@
 import { filterAsync, mapAsync, someAsync } from "./async-array.js";
+import { callerReplyOutput } from "./caller-reply-output.js";
+import { activeDurationMs } from "./run-active-duration.js";
 import crypto from "node:crypto";
 import os from "node:os";
 import fs from "node:fs";
@@ -88,7 +90,8 @@ import {
   type WorkflowNode,
   WorkflowError,
   WORKFLOW_TOOL_ADAPTER_ID,
-  defaultRagSearchMode
+  defaultRagSearchMode,
+  withAutoTypedSetFields
 } from "@ai-orchestrator/shared";
 import { diffWorkflows } from "@ai-orchestrator/shared";
 import { BUDGET_SCOPE_TYPES, isBudgetScopeType, readTraceCarrier, repairWorkflowErrorConfigs, type BudgetScopeType } from "@ai-orchestrator/shared";
@@ -3544,6 +3547,10 @@ export async function createApp(
       }
       // 12.6 — a gateway call's run is the client's, also the part after an approval (whoever decided it).
       const usageUser = usageUserOf(input.triggeredBy, input.gatewayUsage);
+      // Latency is the time the run worked: a resumed run keeps its first start, so its wait for approvals is left out.
+      // Without the approval rows the wall time is recorded, as before.
+      const approvalWaits = await store.listApprovalRequestsForExecution(input.executionId).catch(() => []);
+      const usageDurationMs = activeDurationMs(input.result.startedAt, input.result.completedAt, approvalWaits);
       // The run's sub-workflows' spend joins its row; a child that ends later is recorded on its own.
       const runSubWorkflowSpend = subWorkflowSpend.take(input.executionId);
       const subWorkflowTelemetry = runSubWorkflowSpend?.closeIntoRun() ?? [];
@@ -3557,7 +3564,7 @@ export async function createApp(
         triggerType: input.triggerType ?? null,
         ...(input.gatewayUsage ? { clientId: input.gatewayUsage.clientId, toolsetId: input.gatewayUsage.toolsetId } : {}),
         status: input.result.status,
-        durationMs: toDurationMs(input.result.startedAt, input.result.completedAt) ?? 0,
+        durationMs: usageDurationMs,
         nodeResults: nodeOutputs,
         ...(input.liveModelCalls ? { liveModelCalls: input.liveModelCalls } : {}),
         ...(subWorkflowTelemetry.length > 0 ? { subWorkflowTelemetry } : {})
@@ -11632,9 +11639,12 @@ export async function createApp(
         details: parsed.error.issues
       };
     }
+    // A new workflow from a script or by hand starts on the newer Set behaviour (untyped fields are auto); one that
+    // overwrites a stored workflow keeps its fields as sent.
+    const created = (await store.getWorkflow(parsed.data.id)) ? parsed.data : withAutoTypedSetFields(parsed.data);
 
     // A draft saves with unfinished node settings (the editor shows them as warnings); a broken graph does not.
-    const validation = validateWorkflowGraph(parsed.data);
+    const validation = validateWorkflowGraph(created);
     const blocking = saveBlockingIssues(validation);
     if (blocking.length > 0) {
       reply.code(400);
@@ -11644,10 +11654,10 @@ export async function createApp(
       };
     }
 
-    const saveDenial = await workflowSaveDenial(user, parsed.data);
+    const saveDenial = await workflowSaveDenial(user, created);
     if (saveDenial) return denyRunAccess(reply, saveDenial);
 
-    const savedWorkflow = await store.upsertWorkflow(parsed.data, { createdBy: user.id });
+    const savedWorkflow = await store.upsertWorkflow(created, { createdBy: user.id });
     await workflowVersionService.snapshot({ workflow: savedWorkflow, createdBy: user.id, changeNote: "created" });
     await workflowChanged(savedWorkflow.id);
     await audit(request, user, {
@@ -11905,10 +11915,13 @@ export async function createApp(
     }
 
     try {
-      const workflow = parsed.data.json
-        ? importWorkflowFromJson(parsed.data.json)
-        : // Like the JSON path: invalid stored error settings are left out (and reported by validation), not refused.
-          workflowSchema.parse(repairWorkflowErrorConfigs(parsed.data.workflow).workflow);
+      // A file L2M never saved (no createdAt) starts on the newer Set behaviour; an export of a stored workflow keeps its own.
+      const workflow = withAutoTypedSetFields(
+        parsed.data.json
+          ? importWorkflowFromJson(parsed.data.json)
+          : // Like the JSON path: invalid stored error settings are left out (and reported by validation), not refused.
+            workflowSchema.parse(repairWorkflowErrorConfigs(parsed.data.workflow).workflow)
+      );
 
       const validation = validateWorkflowGraph(workflow);
       const blocking = saveBlockingIssues(validation);
@@ -13739,7 +13752,7 @@ button{padding:10px 16px;background:#2b6cb0;color:#fff;border:none;border-radius
         executionId,
         status: result.status,
         session_id: sessionId,
-        output: result.output
+        output: callerReplyOutput(workflow, result.output)
       };
     }
   );
@@ -14188,7 +14201,9 @@ button{padding:10px 16px;background:#2b6cb0;color:#fff;border:none;border-radius
     reply.raw.writeHead(200, {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive"
+      Connection: "keep-alive",
+      // A proxy in front (the Docker image's nginx) passes each event on at once instead of buffering the stream.
+      "X-Accel-Buffering": "no"
     });
     if (typeof reply.raw.flushHeaders === "function") {
       reply.raw.flushHeaders();
@@ -14878,7 +14893,8 @@ const NO_WEBHOOK_MATCH_MESSAGE = "No webhook endpoint matches this path and meth
         }
 
         const defaultResponsePayload = {
-          output: result.output ?? null,
+          // A workflow without an Output node answers with its last node's own fields, never the run context.
+          output: callerReplyOutput(match.workflow, result.output) ?? null,
           // Phase 12 coverage — under response rules the error text (which can quote run data) stays in the history.
           error: result.status === "error" ? callerErrorOf(result, "Workflow execution failed") : undefined,
           // A stable code for the failure, when it has one (`workflow_unfinished`: a sub-workflow production refuses).

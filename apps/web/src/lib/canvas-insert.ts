@@ -3,7 +3,7 @@
  * `+` was clicked), to the right of it and clear of other nodes, joined by an edge from that node's first free output.
  */
 import { ORBIT, isHubType } from "./stages";
-import { validateConnection, type RuleEdge, type RuleNode } from "./connection-rules";
+import { AUXILIARY_HANDLES, validateConnection, type RuleEdge, type RuleNode } from "./connection-rules";
 import { ERROR_OUTPUT_HANDLE } from "./error-output";
 
 export interface InsertNode {
@@ -30,6 +30,8 @@ export const INSERT_GAP_X = 80;
 /** Vertical step between rows (one card plus a gap). */
 export const INSERT_ROW_STEP = ORBIT.cardHeight + 24;
 const OVERLAP_MARGIN = 16;
+/** Room a new agent keeps around its centre for its rings (it has nothing attached yet). */
+const NEW_HUB_REACH = ORBIT.outerRadius + ORBIT.satelliteSize / 2;
 
 const FIXED_SOURCE_HANDLES: Record<string, string[]> = {
   if_node: ["true", "false"],
@@ -133,14 +135,18 @@ export function findFreePosition(candidate: Point, nodes: readonly InsertNode[])
   return spot;
 }
 
-/** Where a node inserted after `source`'s `handle` goes: to its right, on that output's row, clear of `nodes`. */
-export function insertPositionAfter(source: InsertNode, handle: string | null, nodes: readonly InsertNode[]): Point {
+/**
+ * Where a node inserted after `source`'s `handle` goes: to its right, on that output's row, clear of `nodes`. A new
+ * agent (`insertedType`) keeps room for its rings, so they do not cover the node it follows.
+ */
+export function insertPositionAfter(source: InsertNode, handle: string | null, nodes: readonly InsertNode[], insertedType?: string): Point {
   const handles = sourceHandleIds(source);
   // The Error output sits below the node's other outputs, so its node goes on the row after theirs.
   const index = handle === ERROR_OUTPUT_HANDLE && !handles.includes(handle) ? handles.length : Math.max(0, handles.indexOf(handle));
+  const hub = insertedType !== undefined && isHubType(insertedType);
   const candidate = {
-    x: source.position.x + sizeOf(source).width + INSERT_GAP_X,
-    y: source.position.y + index * INSERT_ROW_STEP
+    x: source.position.x + sizeOf(source).width + INSERT_GAP_X + (hub ? NEW_HUB_REACH - ORBIT.hubSize / 2 : 0),
+    y: source.position.y + index * INSERT_ROW_STEP + (hub ? Math.round((sizeOf(source).height - ORBIT.hubSize) / 2) : 0)
   };
   return findFreePosition(candidate, nodes);
 }
@@ -164,4 +170,99 @@ export function planInsertConnection(
   if (!canAutoConnect(source.data.nodeType, inserted.data.nodeType, handle)) return { kind: "place" };
   const verdict = validateConnection({ source: source.id, target: inserted.id, sourceHandle: handle }, [...nodes, inserted], edges);
   return verdict.ok ? { kind: "connect", sourceHandle: verdict.sourceHandle } : { kind: "refused", message: verdict.message };
+}
+
+
+/** Templates that only read what the run started with: the prompt, the trigger's data. */
+const TRIGGER_TEMPLATE = /^\s*\{\{\s*(user_prompt|system_prompt|input|webhook|trigger|payload|body)(?:\.[\w.]+)?\s*\}\}\s*$/;
+
+/** Whether an Output template shows only the run's input: the prompt or trigger data, or the start node's own result. */
+function readsTrigger(template: string, source: InsertNode): boolean {
+  if (TRIGGER_TEMPLATE.test(template)) return true;
+  if (!isInputType(source.data.nodeType)) return false;
+  const id = source.id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`^\\s*\\{\\{\\s*(?:results\\.)?${id}(?:\\.[\\w.]+)?\\s*\\}\\}\\s*$`).test(template);
+}
+
+export interface SplicePlan {
+  /** The edge the new node goes into; it is replaced by source → new and new → target. */
+  replaced: InsertEdge;
+  /** The output of the new node that leads on to the target (`null` = its main output). */
+  outgoingHandle: string | null;
+  /** Where the new node goes: where the old target started, centred on its row. */
+  position: Point;
+  /** New positions of the target and every node after it, moved right to make room. */
+  moved: Record<string, Point>;
+  /** The target Output's new template, when it read the trigger and the new node is an agent (it shows the answer). */
+  outputTemplate?: string;
+}
+
+function isStepEdge(edge: InsertEdge): boolean {
+  return !edge.sourceHandle || (!AUXILIARY_HANDLES.has(edge.sourceHandle) && edge.sourceHandle !== ERROR_OUTPUT_HANDLE);
+}
+
+/** `startId` and every node after it on step edges, with the nodes attached to them (their rings move along). */
+function downstreamOf(startId: string, edges: readonly InsertEdge[]): Set<string> {
+  const out = new Set<string>([startId]);
+  const queue = [startId];
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    for (const edge of edges) {
+      if (edge.source !== id || out.has(edge.target)) continue;
+      out.add(edge.target);
+      queue.push(edge.target);
+    }
+  }
+  return out;
+}
+
+/**
+ * When the output a node is added after already leads to exactly one node, the new node goes into that edge
+ * (source → new → target) instead of starting a parallel branch. Null when the output has no edge or several, or the
+ * new node cannot lead on to the target (a start node, a node only placed, or an edge the connection rules refuse).
+ */
+export function planSplice(
+  source: InsertNode & RuleNode,
+  handle: string | null,
+  inserted: RuleNode & { data: RuleNode["data"] & { config?: Record<string, unknown> } },
+  nodes: ReadonlyArray<InsertNode & RuleNode>,
+  edges: readonly InsertEdge[]
+): SplicePlan | null {
+  const unlabeled = source.data.nodeType === "filter_node" && !sourceHandleIds(source).includes(null) ? sourceHandleIds(source)[0] ?? null : null;
+  const leaving = edges.filter((edge) => edge.source === source.id && isStepEdge(edge) && (edge.sourceHandle ?? unlabeled) === handle);
+  if (leaving.length !== 1) return null;
+  const replaced = leaving[0]!;
+  const target = nodes.find((node) => node.id === replaced.target);
+  if (!target || isInputType(inserted.data.nodeType) || !canAutoConnect(source.data.nodeType, inserted.data.nodeType, handle)) return null;
+  if (!canAutoConnect(inserted.data.nodeType, target.data.nodeType)) return null;
+  const outgoing = sourceHandleIds({ id: inserted.id, position: { x: 0, y: 0 }, data: inserted.data })[0] ?? null;
+  const remaining = edges.filter((edge) => edge !== replaced);
+  const verdict = validateConnection({ source: inserted.id, target: target.id, sourceHandle: outgoing }, [...nodes, inserted], remaining);
+  if (!verdict.ok || (verdict.sourceHandle && AUXILIARY_HANDLES.has(verdict.sourceHandle))) return null;
+
+  const hub = isHubType(inserted.data.nodeType);
+  const targetSize = sizeOf(target);
+  const targetCentreY = target.position.y + targetSize.height / 2;
+  const left = Math.max(target.position.x, source.position.x + sizeOf(source).width + INSERT_GAP_X);
+  // An agent keeps room for its rings: its card sits in the middle of them.
+  const position = hub
+    ? { x: Math.round(left + NEW_HUB_REACH - ORBIT.hubSize / 2), y: Math.round(targetCentreY - ORBIT.hubSize / 2) }
+    : { x: Math.round(left), y: Math.round(targetCentreY - ORBIT.cardHeight / 2) };
+  const right = hub ? position.x + ORBIT.hubSize / 2 + NEW_HUB_REACH : position.x + ORBIT.cardWidth;
+  const targetLeft = isHubType(target.data.nodeType) ? target.position.x + ORBIT.hubSize / 2 - NEW_HUB_REACH : target.position.x;
+  const shift = Math.max(0, Math.round(right + INSERT_GAP_X - targetLeft));
+  const moved: Record<string, Point> = {};
+  if (shift > 0) {
+    for (const id of downstreamOf(target.id, remaining)) {
+      const node = nodes.find((candidate) => candidate.id === id);
+      if (node && id !== source.id) moved[id] = { x: node.position.x + shift, y: node.position.y };
+    }
+  }
+
+  const plan: SplicePlan = { replaced, outgoingHandle: verdict.sourceHandle, position, moved };
+  const template = target.data.config?.responseTemplate;
+  if (hub && target.data.nodeType === "output" && typeof template === "string" && readsTrigger(template, source)) {
+    plan.outputTemplate = "{{answer}}";
+  }
+  return plan;
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { canAutoConnect, planInsertConnection, chooseSourceHandle, findFreePosition, insertPositionAfter, sourceHandleIds, type InsertNode } from "./canvas-insert";
+import { canAutoConnect, planInsertConnection, planSplice, chooseSourceHandle, findFreePosition, insertPositionAfter, sourceHandleIds, type InsertNode } from "./canvas-insert";
+import { ORBIT } from "./stages";
 
 function node(id: string, nodeType: string, x: number, y: number, config: Record<string, unknown> = {}): InsertNode {
   return { id, position: { x, y }, data: { nodeType, config } };
@@ -181,5 +182,84 @@ describe("Filter outputs", () => {
 
   it("leaves other branching nodes' unlabeled edges alone", () => {
     expect(chooseSourceHandle(node("i", "if_node", 0, 0), [{ source: "i", target: "x" }])).toBe("true");
+  });
+});
+
+describe("planSplice", () => {
+  const ruleNode = (id: string, nodeType: string, x: number, y: number, config: Record<string, unknown> = {}) => ({
+    id,
+    position: { x, y },
+    data: { nodeType, label: id, config }
+  });
+  const prompt = ruleNode("user_prompt", "user_prompt", 140, 180, { text: "hi" });
+  const output = ruleNode("output", "output", 420, 180, { responseTemplate: "{{user_prompt}}", outputKey: "result" });
+  const edges = [{ source: "user_prompt", target: "output" }];
+
+  it("puts an agent into the only edge, moves the Output past its rings and points it at the answer", () => {
+    const agent = { id: "agent", data: { nodeType: "agent_orchestrator", label: "Agent", config: {} } };
+    const plan = planSplice(prompt, null, agent, [prompt, output], edges);
+    expect(plan).not.toBeNull();
+    expect(plan!.replaced).toEqual(edges[0]);
+    expect(plan!.outgoingHandle).toBeNull();
+    expect(plan!.outputTemplate).toBe("{{answer}}");
+    // The agent's rings start clear of the prompt card, and the Output starts clear of the rings.
+    const centre = plan!.position.x + ORBIT.hubSize / 2;
+    const reach = ORBIT.outerRadius + ORBIT.satelliteSize / 2;
+    expect(centre - reach).toBeGreaterThanOrEqual(prompt.position.x + ORBIT.cardWidth);
+    expect(plan!.moved.output!.x).toBeGreaterThanOrEqual(centre + reach);
+    expect(plan!.moved.output!.y).toBe(180);
+    expect(plan!.moved.user_prompt).toBeUndefined();
+  });
+
+  it("keeps an Output template that reads something else, and a step node keeps its card size", () => {
+    const custom = { ...output, data: { ...output.data, config: { responseTemplate: "Got {{user_prompt}} at {{now}}" } } };
+    const agent = { id: "agent", data: { nodeType: "agent_orchestrator", label: "Agent", config: {} } };
+    expect(planSplice(prompt, null, agent, [prompt, custom], edges)!.outputTemplate).toBeUndefined();
+    const http = { id: "http", data: { nodeType: "http_request", label: "HTTP", config: {} } };
+    const plan = planSplice(prompt, null, http, [prompt, output], edges)!;
+    expect(plan.outputTemplate).toBeUndefined();
+    expect(plan.position.x).toBe(prompt.position.x + ORBIT.cardWidth + 80);
+    expect(plan.moved.output!.x).toBe(plan.position.x + ORBIT.cardWidth + 80);
+  });
+
+  it("moves every node after the target, with nodes on its ports", () => {
+    const agentNode = ruleNode("agent", "agent_orchestrator", 600, 160);
+    const model = ruleNode("model", "llm_call", 640, 40);
+    const end = ruleNode("end", "output", 1000, 180);
+    const all = [prompt, agentNode, model, end];
+    const graph = [
+      { source: "user_prompt", target: "agent" },
+      { source: "agent", target: "model", sourceHandle: "chat_model" },
+      { source: "agent", target: "end" }
+    ];
+    const http = { id: "http", data: { nodeType: "http_request", label: "HTTP", config: {} } };
+    const plan = planSplice(prompt, null, http, all, graph)!;
+    expect(Object.keys(plan.moved).sort()).toEqual(["agent", "end", "model"]);
+    const shift = plan.moved.agent!.x - 600;
+    expect(shift).toBeGreaterThan(0);
+    expect(plan.moved.model!.x - 640).toBe(shift);
+    expect(plan.moved.end!.x - 1000).toBe(shift);
+  });
+
+  it("starts no splice for an output with no edge or several, or a new node that cannot lead on", () => {
+    const http = { id: "http", data: { nodeType: "http_request", label: "HTTP", config: {} } };
+    expect(planSplice(prompt, null, http, [prompt, output], [])).toBeNull();
+    const other = ruleNode("other", "output", 420, 400);
+    expect(planSplice(prompt, null, http, [prompt, output, other], [...edges, { source: "user_prompt", target: "other" }])).toBeNull();
+    // A start node takes no incoming edge, and a sticky note none at all.
+    const trigger = { id: "hook", data: { nodeType: "webhook_input", label: "Hook", config: {} } };
+    expect(planSplice(prompt, null, trigger, [prompt, output], edges)).toBeNull();
+    const note = { id: "note", data: { nodeType: "sticky_note", label: "Note", config: {} } };
+    expect(planSplice(prompt, null, note, [prompt, output], edges)).toBeNull();
+  });
+});
+
+describe("insertPositionAfter for a new agent", () => {
+  it("keeps the agent's rings clear of the node it follows", () => {
+    const source = node("prompt", "user_prompt", 100, 200);
+    const spot = insertPositionAfter(source, null, [source], "agent_orchestrator");
+    const centre = spot.x + ORBIT.hubSize / 2;
+    expect(centre - (ORBIT.outerRadius + ORBIT.satelliteSize / 2)).toBeGreaterThanOrEqual(100 + ORBIT.cardWidth);
+    expect(spot.y + ORBIT.hubSize / 2).toBe(200 + ORBIT.cardHeight / 2);
   });
 });

@@ -344,7 +344,7 @@ describe("ExecutionHistoryPanel", () => {
     expect(api.fetchMcpCassette).toHaveBeenCalledWith("cas_1");
     expect(await within(dialog).findByText("lookup_kb")).toBeInTheDocument();
     expect(within(dialog).getByText("Docs")).toBeInTheDocument();
-    expect(within(dialog).getByText(/Model calls are not recorded/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/answers MCP calls from the cassette and calls the model again/)).toBeInTheDocument();
     expect(within(dialog).queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
 
     await user.click(within(dialog).getByRole("button", { name: "Replay, live fallback" }));

@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 /**
  * Drafts and run feedback in the editor: a workflow saves without an Output node and with unfinished node settings
  * (listed above the canvas), opening a workflow shows its latest run, "Webhook run" asks for a test payload and keeps
- * it, the webhook's direct API URL names the API's port, "New workflow" saves nothing until the first edit, and a Loop
+ * it, the webhook dialog shows no developer-only API hint, "New workflow" saves nothing until the first edit, and a Loop
  * run gives no duplicate React key. No model is called. Everything it makes is removed at the end.
  */
 
@@ -142,7 +142,28 @@ test.describe("editor drafts and run feedback", () => {
     }
   });
 
-  test("names the API's real port in the webhook's direct URL", async ({ page }) => {
+  test("marks a Set field its template filled with nothing in the run data", async ({ page }) => {
+    await guardLocalModels(page);
+    await signIn(page);
+    const id = `wf-e2e-empty-${Date.now()}`;
+    try {
+      const flow = hookFlow(id);
+      flow.nodes[1] = {
+        ...(flow.nodes[1] as Record<string, unknown>),
+        config: { assignments: [{ key: "line", valueTemplate: "order for {{webhook.customer}}" }, { key: "nickname", valueTemplate: "{{webhook.nickname}}", type: "auto" }] }
+      } as (typeof flow.nodes)[number];
+      expect((await page.request.post("/api/workflows", { data: flow })).ok()).toBeTruthy();
+      expect((await page.request.post(`/api/workflows/${id}/execute`, { data: {} })).ok()).toBeTruthy();
+      await openEditor(page, id);
+      await expect(page.locator(".hud-run-status .hud-run-label")).toContainText("last run", { timeout: 15_000 });
+      await page.locator(".react-flow__node").filter({ hasText: "Order line" }).first().dblclick();
+      await expect(page.getByTestId("run-data-rendered-empty")).toHaveText("Rendered empty: {{webhook.customer}}, {{webhook.nickname}}");
+    } finally {
+      await page.request.delete(`/api/workflows/${id}`);
+    }
+  });
+
+  test("shows the webhook's test and production URLs without a developer hint", async ({ page }) => {
     await guardLocalModels(page);
     await signIn(page);
     const id = `wf-e2e-url-${Date.now()}`;
@@ -152,12 +173,9 @@ test.describe("editor drafts and run feedback", () => {
       await page.locator(".react-flow__node").filter({ hasText: "Orders hook" }).first().dblclick();
       const tip = page.locator(".cfg-tip").filter({ hasText: "Production URL" });
       await expect(tip).toBeVisible();
-      const apiPort = new URL(API_URL).port || "80";
-      const appPort = new URL(page.url()).port;
-      if (apiPort !== appPort) {
-        await expect(tip).toContainText(`:${apiPort}/webhook/${id}-orders`);
-      }
-      if (apiPort !== "4000") await expect(tip).not.toContainText(":4000/");
+      await expect(tip).toContainText(`/webhook/${id}-orders`);
+      await expect(tip).not.toContainText("Direct API URL");
+      await expect(tip).not.toContainText("VITE_API_BASE_URL");
     } finally {
       await page.request.delete(`/api/workflows/${id}`);
     }

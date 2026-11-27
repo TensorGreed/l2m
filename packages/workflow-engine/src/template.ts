@@ -59,6 +59,25 @@ function strictTemplatesOn(): boolean {
   return strictness.getStore() === true;
 }
 
+const emptyRenders = new AsyncLocalStorage<Set<string>>();
+
+/**
+ * Runs `body` and lists the `{{ }}` it rendered that had no value (their bodies, the run's optional prompt fields left
+ * out), for the node's "rendered empty" warning. Nothing changes how a template renders.
+ */
+export async function collectEmptyRenders<T>(body: () => Promise<T>): Promise<{ result: T; renderedEmpty: string[] }> {
+  const seen = new Set<string>();
+  const result = await emptyRenders.run(seen, body);
+  return { result, renderedEmpty: [...seen] };
+}
+
+/** Adds the `{{ }}` without a value to the running collector, when there is one. */
+function noteEmptyRenders(missing: MissingTemplateValue[]): void {
+  const seen = emptyRenders.getStore();
+  if (!seen) return;
+  for (const entry of missing) if (!OPTIONAL_RUN_FIELDS.has(entry.body)) seen.add(entry.body);
+}
+
 /** One `{{ }}` of a template that rendered nothing: its body and why. */
 export interface MissingTemplateValue {
   body: string;
@@ -177,6 +196,7 @@ export function renderTemplateAdvanced(
   // Strict templates: a `{{ }}` without a value fails the node, except the run's optional prompt fields. Thrown
   // after the sandbox session has closed, so it never counts as a sandbox failure.
   if (strict) throwIfStrictMissing(result.missing);
+  noteEmptyRenders(result.missing);
   return result;
 }
 
@@ -230,6 +250,7 @@ export function renderTemplateValue(
     });
   }
   if (strictTemplatesOn()) throwIfStrictMissing(missing);
+  noteEmptyRenders(missing);
   return { single: true, value: value === null ? undefined : value, missing };
 }
 
@@ -335,6 +356,7 @@ export function evaluateConditionTemplate(
   });
   // Strict templates: a `{{ }}` of the condition without a value fails the node (after the session has closed).
   if (strictTemplatesOn()) throwIfStrictMissing(missing);
+  noteEmptyRenders(missing);
   if (!outcome.ok) {
     throw new Error(
       `IF condition '${template}' could not be evaluated once its {{ }} values were filled in (${outcome.kind}). ` +

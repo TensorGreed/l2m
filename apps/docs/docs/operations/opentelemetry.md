@@ -48,7 +48,9 @@ The repository ships a collector setup for trying this locally: [`ops/otel/docke
    tail -n 1 ops/otel/otel-data/traces.jsonl
    ```
 
-   In L2M, **Settings → Observability** shows the settings in effect and the most recent spans of the instance.
+   In L2M, **Settings → Observability → Metrics & Traces** shows the settings in effect and the most recent spans of the instance.
+
+To send traces straight to Langfuse, Arize Phoenix or LangSmith without a collector, see [Send traces to Langfuse, Phoenix or LangSmith](./tracing-backends.md).
 
 The collector file is a starting point. For production, replace its `debug` and `file` exporters with your backends, and add the collector's own sampling, batching and retry settings.
 
@@ -327,7 +329,7 @@ The value is not case-sensitive. The older `OTEL_INSTRUMENTATION_GENAI_CAPTURE_M
 
 Images are named by type only, never copied. Not captured: embedding inputs, retrieval queries, memory records (memory a model call sends is part of its input messages), error text from a provider or tool, and anything on run, node, agent or MCP gateway SERVER spans. A model call's content is recorded as it went to and came from the provider, including an answer that content rules then blocked or rewrote (cleaned as below). Earlier tool errors and content rule notices the model is shown are part of the next call's input messages.
 
-**How content is cleaned.** Nothing is set on a span as it was handed over. When the span ends it is held back from the exporter (and from **Settings → Observability**'s recent spans) while L2M, off the request path:
+**How content is cleaned.** Nothing is set on a span as it was handed over. When the span ends it is held back from the exporter (and from **Settings → Observability → Metrics & Traces**'s recent spans) while L2M, off the request path:
 
 1. removes secrets: credential fields and token shapes, and every secret value the deployment holds, as it is and URL- or base64-encoded (stored secrets, cached external secrets, values stored or read since start-up, credential environment variables, passwords in URL-valued environment variables and the OTLP header values). Values shorter than 6 characters are not matched, and a secret created on another instance is matched here within 30 seconds;
 2. masks what [content rules](../product/content-rules-engine.md) detect, with stable keyed surrogates: the built-in data classes (emails, phone numbers, card numbers, national ids, ...) and the dictionaries of every rule set. The same value gets the same surrogate on every span, so a backend can still group by it; the key is derived from the master key and differs from production capture's;
@@ -454,7 +456,7 @@ These still work, and the API logs a warning at start-up when they are set:
 
 ## Verifying it works
 
-`GET /api/observability` (admin) returns the settings in effect; **Settings → Observability** shows the same:
+`GET /api/observability` (admin) returns the settings in effect; **Settings → Observability → Metrics & Traces** shows the same:
 
 ```json
 {
@@ -483,7 +485,7 @@ These still work, and the API logs a warning at start-up when they are set:
 ## Performance
 
 - **Off.** No OpenTelemetry module is loaded (a test starts the API in a fresh process and checks the list of loaded modules), no HTTP hooks are installed, and the provider and MCP registries are not wrapped. What remains on each node, model call or tool call is a check that tracing is off.
-- **On.** Spans are created in the process and exported by a background timer in batches (every 5 seconds, 512 per request). The export never blocks a request. When the export queue (2048 spans) is full, new spans are dropped instead of using more memory. Each instance also keeps its last 5,000 spans in memory for **Settings → Observability**.
+- **On.** Spans are created in the process and exported by a background timer in batches (every 5 seconds, 512 per request). The export never blocks a request. When the export queue (2048 spans) is full, new spans are dropped instead of using more memory. Each instance also keeps its last 5,000 spans in memory for **Settings → Observability → Metrics & Traces**.
 - **Volume.** A run produces one span per node that ran, plus one per agent loop, model call, tool call and MCP request. Keep `L2M_OTEL_SPAN_DETAIL=standard` (verbose adds a span per agent turn and per enqueued job), sample with `parentbased_traceidratio` on busy deployments, and set `OTEL_HTTP_SERVER_SPANS=false` if you only want run spans. Metrics carry no per-run ids, so their number of series stays bounded.
 - **Content capture.** Masking runs after the span's timing is fixed and off the request path, so it delays export, not the request. It is bounded: more than 256 spans waiting, or 10 seconds per span, drops the content instead (see [content capture](#content-capture)). Very large prompts make masking slower; `L2M_OTEL_CONTENT_MAX_CHARS` and the `too_large` limit keep it bounded.
 - **Shutdown.** A clean stop waits at most 5 seconds for the last export.

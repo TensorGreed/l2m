@@ -5,6 +5,7 @@ import {
   computeStages,
   hasOrbitOverlap,
   hasUsablePositions,
+  hubExtent,
   orbitPositions,
   ringGeometry,
   summarizeNode,
@@ -159,6 +160,24 @@ describe("tidyLayout", () => {
     expect(Math.abs(cardTop - hubCenterY)).toBeGreaterThanOrEqual(ORBIT.outerRadius);
     // Attached nodes are positioned on the orbit.
     expect(layout.model).toEqual(orbitPositions("agent", computeAttachmentSlots(nodes, edges), layout.agent!).model);
+  });
+});
+
+describe("tidyLayout and satellite labels", () => {
+  it("keeps the next column clear of a tool's label beside the outer ring", () => {
+    const nodes = [node("trigger", "user_prompt"), node("agent", "agent_orchestrator"), node("model", "llm_call"), node("tool", "mcp_tool"), node("out", "output")];
+    const edges = [edge("trigger", "agent"), edge("agent", "model", "chat_model"), edge("agent", "tool", "tool"), edge("agent", "out")];
+    const layout = tidyLayout(nodes, edges);
+    const slots = computeAttachmentSlots(nodes, edges);
+    const toolLabelRight = layout.tool!.x + ORBIT.satelliteSize + 8 + 160;
+    expect(layout.out!.x).toBeGreaterThan(toolLabelRight);
+    expect(hubExtent("agent", slots).x).toBeGreaterThan(ORBIT.outerRadius + ORBIT.satelliteSize / 2);
+    expect(hasOrbitOverlap(nodes.map((entry) => ({ ...entry, position: layout[entry.id]! })), edges)).toBe(false);
+  });
+
+  it("reserves only the ring for an agent with nothing attached", () => {
+    const slots = computeAttachmentSlots([node("agent", "agent_orchestrator")], []);
+    expect(hubExtent("agent", slots)).toEqual({ x: ORBIT.outerRadius + ORBIT.satelliteSize / 2, y: ORBIT.outerRadius + ORBIT.satelliteSize / 2 });
   });
 });
 

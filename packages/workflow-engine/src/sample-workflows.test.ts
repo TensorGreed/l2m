@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { behavioursOffDefault } from "@ai-orchestrator/shared";
 import { importWorkflowFromJson } from "./serialization.js";
-import { validateWorkflowGraph } from "./validation.js";
+import { saveBlockingIssues, validateWorkflowGraph } from "./validation.js";
 
 const SAMPLES_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "samples");
 const SAMPLES = path.join(SAMPLES_ROOT, "workflows");
@@ -17,11 +17,14 @@ const STARTERS = path.join(SAMPLES_ROOT, "starters");
 const files = fs.readdirSync(SAMPLES).filter((file) => file.endsWith(".json")).sort();
 const starterFiles = fs.readdirSync(STARTERS).filter((file) => file.endsWith(".json")).sort();
 
+/** Settings a template leaves for the person to pick (their own knowledge base): listed as unfinished, never an error. */
+const PICKED_BY_THE_PERSON = new Set(["missing_rag_knowledge_base"]);
+
 function expectValid(raw: string) {
   const workflow = importWorkflowFromJson(raw);
   const validation = validateWorkflowGraph(workflow);
-  expect(validation.issues.map((issue) => issue.message)).toEqual([]);
-  expect(validation.valid).toBe(true);
+  expect(validation.issues.filter((issue) => !PICKED_BY_THE_PERSON.has(issue.code)).map((issue) => issue.message)).toEqual([]);
+  expect(saveBlockingIssues(validation)).toEqual([]);
 }
 
 describe("sample workflows", () => {

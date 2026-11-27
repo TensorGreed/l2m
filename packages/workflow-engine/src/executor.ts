@@ -170,6 +170,7 @@ import {
 } from "./outbound-url-guard";
 import {
   bindCheckedRenderings,
+  collectEmptyRenders,
   evaluateConditionTemplate,
   renderTemplate,
   runWithStrictTemplates,
@@ -4815,6 +4816,17 @@ async function runWithNodeTemplateMode<T>(context: Pick<NodeRuntimeContext, "wor
   return await runWithStrictTemplates(context.workflow.settings?.strictTemplates === true, body);
 }
 
+/** A node result's "rendered empty" fields: the template bodies, and one warning naming them. */
+function renderedEmptyField(renderedEmpty: string[]): Pick<NodeExecutionResult, "renderedEmpty" | "warnings"> {
+  if (renderedEmpty.length === 0) return {};
+  const shown = renderedEmpty.slice(0, 5).map((body) => `{{${body}}}`).join(", ");
+  const more = renderedEmpty.length > 5 ? ` and ${renderedEmpty.length - 5} more` : "";
+  return {
+    renderedEmpty,
+    warnings: [`Rendered empty: ${shown}${more} had no value. Check the field names, or turn on Strict templates to fail the node instead.`]
+  };
+}
+
 function isStrictTemplateFailure(error: unknown): boolean {
   return error instanceof WorkflowError && error.metadata?.code === TEMPLATE_VALUE_MISSING_CODE;
 }
@@ -6389,13 +6401,19 @@ async function executeNodeHandler(
              : typeof config.knowledgeBaseId === "string"
                ? config.knowledgeBaseId
                : "";
-           if (!kbId) {
-             throw new Error("knowledge-base vector store requires vectorStoreConfig.knowledgeBaseId");
+           // No knowledge base picked (or a template's placeholder id): fail, never answer from an empty context.
+           const pickKnowledgeBase =
+             "Open the RAG Retrieve node and pick one under Knowledge Base. Create one under Knowledge in the sidebar if you have none.";
+           if (!kbId.trim()) {
+             throw new WorkflowError("RAG Retrieve searches a knowledge base, but none is picked.", ErrorCategory.NODE_CONFIG, false, undefined, pickKnowledgeBase);
            }
            if (!dependencies.knowledgeBaseStore) {
              throw new Error(
                "knowledge-base vector store unavailable — dependencies.knowledgeBaseStore not wired"
              );
+           }
+           if (!(await dependencies.knowledgeBaseStore.getKnowledgeBase(kbId))) {
+             throw new WorkflowError(`RAG Retrieve searches knowledge base '${kbId}', which does not exist.`, ErrorCategory.NODE_CONFIG, false, undefined, pickKnowledgeBase);
            }
            // v74 — a search that returns a chunk written by sensitive work is a read of marked content.
            const sensitivity = dependencies.sessionSensitivity;
@@ -11453,7 +11471,11 @@ async function executeWorkflowRun(
       // Phase 11.2 — the decision belongs to the node the run paused at, once.
       const resumeDecision = pendingResumeDecision?.nodeId === node.id ? pendingResumeDecision : undefined;
       pendingResumeDecision = undefined;
-      const { output: nodeOutput, attempts } = await nodeSpan.enter(() => executeNodeWithRetry(
+      // Templates of the node's settings that had no value render empty (strict templates off): run data names them.
+      const {
+        result: { output: nodeOutput, attempts },
+        renderedEmpty
+      } = await collectEmptyRenders(async () => await nodeSpan.enter(() => executeNodeWithRetry(
         node,
         {
           globals,
@@ -11474,7 +11496,7 @@ async function executeWorkflowRun(
           checkUsage: nodeCheckUsage
         },
         dependencies
-      ));
+      )));
       const output = withRecordedCheckUsage(nodeOutput, nodeCheckUsage);
       // Single use: a granted approval covers the re-run of the node it paused, not later nodes or runs.
       approvedHandoffKeys.clear();
@@ -11495,6 +11517,7 @@ async function executeWorkflowRun(
         input: nodeInput,
         output,
         attempts: attempts > 1 ? attempts : undefined,
+        ...renderedEmptyField(renderedEmpty),
         ...labelState.resultField(node.id)
       });
       await dependencies.onNodeComplete?.({

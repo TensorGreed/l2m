@@ -14,7 +14,6 @@
  * not run on, 2 on a usage error.
  */
 import path from "node:path";
-import { findModelByChecksum, loadNerManifest } from "@ai-orchestrator/ner/models";
 import {
   createDefaultGuardRegistry,
   ENTITY_BENCHMARK_FLOOR_MARGIN,
@@ -56,7 +55,9 @@ interface EntityGate {
 }
 
 /** The floors for a model behind an endpoint: the l2m-ner manifest entry with the same id and ONNX checksum, if it lists floors. */
-function modelGate(model: NerEndpointModel): EntityGate | undefined {
+async function modelGate(model: NerEndpointModel): Promise<EntityGate | undefined> {
+  // Loaded here, not at start: the API image carries the CLI without the l2m-ner package's dependencies.
+  const { findModelByChecksum, loadNerManifest } = await import("@ai-orchestrator/ner/models");
   const entry = findModelByChecksum(loadNerManifest(), model.id, model.sha256);
   if (!entry?.benchmarkFloors) return undefined;
   return { floors: entry.benchmarkFloors, name: `${model.id}'s floors`, where: `benchmarkFloors of ${model.id} in apps/ner/models.json`, margin: ENTITY_MODEL_FLOOR_MARGIN };
@@ -116,7 +117,7 @@ export async function runGuardEntityBenchmarkCommand(args: ParsedArgs, io: CliIo
       throw error;
     }
     registry = createDefaultGuardRegistry({ entityRecognizer: createNerEndpointRecognizer(options, model) });
-    gate = modelGate(model);
+    gate = await modelGate(model);
     // The model is the endpoint's own claim: an unlisted one must not pass a CI gate silently.
     if (!gate && !profile && !reportOnly) {
       write(io.stderr, `The entity endpoint runs ${model.id}, which the l2m-ner model manifest does not list with floors (or with this checksum); nothing to gate on. Pass --report-only to measure it anyway.`);

@@ -1,5 +1,6 @@
 import { CONNECTED_ACCOUNT_PROVIDER_IDS, LIVE_ENTRY_NODE_TYPES, NODE_CONNECTED_ACCOUNT_PROVIDERS, describeHttpSecretAuth, readHttpSecretAuth, resolveRagSearchMode, type ConnectedAccountProviderId } from "@ai-orchestrator/shared";
 import { McpToolArgsForm, McpUseFormButton, OpenApiOperationForm, usesMcpArgsForm, usesOpenApiOperation } from "./IntegrationForms";
+import { renderedEmptyFields } from "../lib/rendered-empty";
 import { buildSchemaForm } from "../lib/mcp-schema-form";
 import { createContext, useCallback, useContext, useEffect, useId, useImperativeHandle, useMemo, useRef, useState, type Ref } from "react";
 import type {
@@ -70,7 +71,6 @@ import { ApprovalGateNodeFields } from "./ApprovalGateNodeFields";
 import { McpAnnotationChips, McpOutputSchema } from "./McpToolMeta";
 import { SecretSaveWarnings } from "./SecretSaveWarnings";
 import { ModelAllowlistWarning, useModelAllowlistWarning } from "./ModelAllowlistWarning";
-import { directApiBaseUrl } from "../lib/direct-api-url";
 import {
   HTTP_AUTH_OPTIONS,
   applyHttpAuthMode,
@@ -1466,19 +1466,6 @@ function getApiBaseUrl(): string {
   }
 
   return "";
-}
-
-function getSuggestedDirectApiBaseUrl(currentBaseUrl: string): string | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-  return directApiBaseUrl({
-    configuredBase: import.meta.env.VITE_API_BASE_URL as string | undefined,
-    // The dev server sets this to the port it proxies the API to (vite.config.ts).
-    apiPort: import.meta.env.VITE_API_PORT as string | undefined,
-    location: window.location,
-    currentBase: currentBaseUrl
-  });
 }
 
 export function NodeInspector({
@@ -5055,11 +5042,8 @@ export function NodeInspector({
       ? config.passThroughFields.map((item) => String(item)).join(",")
       : "system_prompt,user_prompt,session_id,variables";
     const apiBase = getApiBaseUrl();
-    const suggestedApiBase = getSuggestedDirectApiBaseUrl(apiBase);
     const testUrl = `${apiBase}/webhook-test/${normalizedPath}`;
     const productionUrl = `${apiBase}/webhook/${normalizedPath}`;
-    const suggestedTestUrl = suggestedApiBase ? `${suggestedApiBase}/webhook-test/${normalizedPath}` : null;
-    const suggestedProductionUrl = suggestedApiBase ? `${suggestedApiBase}/webhook/${normalizedPath}` : null;
 
     return (
       <>
@@ -5095,17 +5079,6 @@ export function NodeInspector({
             <strong>Production URL</strong>
           </div>
           <code>{`${method} ${productionUrl}`}</code>
-          {suggestedTestUrl && suggestedProductionUrl ? (
-            <div style={{ marginTop: "8px" }}>
-              <div><strong>Direct API URL (fallback)</strong></div>
-              <code>{`${method} ${suggestedTestUrl}`}</code>
-              <div style={{ marginTop: "6px" }} />
-              <code>{`${method} ${suggestedProductionUrl}`}</code>
-              <div style={{ marginTop: "6px" }}>
-                If app-origin URL returns 404, call direct API URL or set <code>VITE_API_BASE_URL</code>.
-              </div>
-            </div>
-          ) : null}
         </div>
 
         <SelectField
@@ -7955,6 +7928,7 @@ export function NodeInspector({
             <ExpressionField
               label="Switch Evaluation Value"
               value={toStringValue(config.switchValue, "{{answer}}")}
+              placeholder="{{sentiment}}"
               onChange={(next) => setConfig((current) => ({ ...current, switchValue: next }))}
               rows={2}
               mode="template"
@@ -8612,6 +8586,7 @@ export function NodeInspector({
                     <TextField
                       label="Field"
                       value={toStringValue(row.field)}
+                      placeholder="amount"
                       onChange={(next) =>
                         setConfig((current) => {
                           const rows = Array.isArray(current.fieldsToSummarize)
@@ -8681,6 +8656,7 @@ export function NodeInspector({
                   <TextField
                     label={`Field ${index + 1}`}
                     value={field}
+                    placeholder="region"
                     onChange={(next) =>
                       setConfig((current) => {
                         const rows = Array.isArray(current.fieldsToGroupBy)
@@ -11019,6 +10995,7 @@ export function NodeInspector({
     return (
       <NodeRunOutput
         result={currentRunResult}
+        emptyFields={renderedEmptyFields(node.data.nodeType, node.data.config, currentRunResult?.output)}
         labelFor={labelFor}
         onOpenNode={onNavigateNode}
         nodeExists={nodeExists}

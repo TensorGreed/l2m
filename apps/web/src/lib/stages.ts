@@ -397,6 +397,37 @@ export function hubReach(hubId: string, slots: AttachmentSlotMap): number {
   return reach;
 }
 
+/** Satellite label boxes (canvas.css `.wf-satellite-label`): below/above a satellite, or beside it. */
+const SATELLITE_LABEL = { width: 170, height: 36, gap: 6, sideWidth: 160, sideGap: 8 } as const;
+
+/**
+ * How far a hub's ring area reaches from its centre, across and down, with the labels of its attached satellites
+ * (a tool's label sits beside it, past the outer ring). Tidy reserves this, so no neighbour sits under a label.
+ */
+export function hubExtent(hubId: string, slots: AttachmentSlotMap): { x: number; y: number } {
+  const reach = hubReach(hubId, slots);
+  const entry = slots[hubId];
+  if (!entry || !isHubEntry(entry)) return { x: reach, y: reach };
+  let x = reach;
+  let y = reach;
+  const s = ORBIT.satelliteSize / 2;
+  for (const slot of ringGeometry(entry)) {
+    if (!slot.nodeId || slot.port === "worker") continue;
+    const dx = Math.abs(Math.cos(slot.angle) * slot.radius);
+    const dy = Math.abs(Math.sin(slot.angle) * slot.radius);
+    // The same rule the canvas uses to put a label beside or below/above its satellite.
+    const sideways = (slot.port === "guard" && dx > s) || dy < dx * 1.2;
+    if (sideways) {
+      x = Math.max(x, dx + s + SATELLITE_LABEL.sideGap + SATELLITE_LABEL.sideWidth);
+      y = Math.max(y, dy + Math.max(s, SATELLITE_LABEL.height / 2));
+    } else {
+      x = Math.max(x, dx + Math.max(s, SATELLITE_LABEL.width / 2));
+      y = Math.max(y, dy + s + SATELLITE_LABEL.gap + SATELLITE_LABEL.height);
+    }
+  }
+  return { x: Math.ceil(x), y: Math.ceil(y) };
+}
+
 export interface TidyOptions {
   columnGap?: number;
   rowGap?: number;
@@ -405,7 +436,7 @@ export interface TidyOptions {
 
 /**
  * Stage columns left → right, nodes within a stage stacked top → bottom and
- * centred on a common axis. Hubs reserve room for their rings; their attached
+ * centred on a common axis. Hubs reserve room for their rings and satellite labels; their attached
  * nodes are placed with `orbitPositions`. Sticky notes keep their position.
  * Returns top-left positions for every node that was moved.
  */
@@ -421,8 +452,8 @@ export function tidyLayout(nodes: StageNodeInput[], edges: StageEdgeInput[], opt
   const extent = (id: string): { w: number; h: number } => {
     const node = byId.get(id);
     if (node && isHubType(nodeTypeOf(node))) {
-      const reach = hubReach(id, slots);
-      return { w: reach * 2, h: reach * 2 };
+      const reach = hubExtent(id, slots);
+      return { w: reach.x * 2, h: reach.y * 2 };
     }
     return { w: ORBIT.cardWidth, h: guardCardHeight(id, slots) };
   };

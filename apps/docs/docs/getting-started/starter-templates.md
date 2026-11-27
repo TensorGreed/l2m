@@ -5,9 +5,9 @@ description: "Ten everyday automations to start from, from webhooks and forms to
 
 # Starter templates
 
-The **Starters** in **Templates** are ten small workflows you can run the moment you open them: no model, no API key, no MCP server and no outside service. Each one shows one everyday pattern, and each is a working base to change into your own automation.
+The **Starters** in **Templates** are eleven small workflows you can run the moment you open them: no model, no API key, no MCP server and no outside service. Each one shows one everyday pattern, and each is a working base to change into your own automation.
 
-**Home** shows four of them first, each with **Use**. To see all ten, open **Templates** and pick **Starters**, or turn on **Runs without setup** to see every template, starter or not, that needs nothing set up. Click **Use Template**: the workflow opens as a new draft. Nothing changes in the template.
+**Home** shows four of them first, each with **Use**. To see all eleven, open **Templates** and pick **Starters**, or turn on **Runs without setup** to see every template, starter or not, that needs nothing set up. Click **Use Template**: the workflow opens as a new draft. Nothing changes in the template.
 
 Other templates say on their card what they need. One whose model or embedder calls a provider that needs a key is marked **Needs an OpenAI key** (or the provider it names); save the key under **Secrets** and pick it on the node, or set the provider's key variable on the API server. A run without the key stops at that node with a message that names the missing key.
 
@@ -25,6 +25,7 @@ A starter's webhook, form and schedule **start switched off**: nothing outside t
 | Call a sub-workflow | Execute Workflow with an input mapping | **Run**. Using the template also creates the sub-workflow it calls |
 | Search a few documents | RAG Retrieve with the built-in local embedder | **Run**; change the question in **Question** |
 | Call an MCP tool | MCP Tool against the built-in sample MCP server | **Run** |
+| Agent that calls a tool | Agent, the Echo test model, a read-only workflow tool | **Run**. Echo makes one labelled demo call to the tool; pick a real model on **Chat Model** to let the agent choose |
 
 ## Where the sample data comes from
 
