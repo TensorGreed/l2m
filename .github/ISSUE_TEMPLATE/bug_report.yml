@@ -53,8 +53,8 @@ body:
     id: version
     attributes:
       label: L2M version / commit
-      description: "`git rev-parse --short HEAD` if you're on `main`, or the release tag (e.g. `v0.1.1`)."
-      placeholder: v0.1.1 or 4bc0a9c
+      description: "`git rev-parse --short HEAD` if you're on `main`, or the release tag (e.g. `v0.1.2`)."
+      placeholder: v0.1.2 or 4bc0a9c
     validations:
       required: true
 

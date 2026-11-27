@@ -12,13 +12,13 @@
 # It sends nothing anywhere except the downloads from GitHub and the image registry.
 #
 # Settings (environment variables, all optional):
-#   L2M_VERSION  release to install, a tag such as v0.1.1 (default: the one installed before, else v0.1.1)
+#   L2M_VERSION  release to install, a tag such as v0.1.2 (default: the one installed before, else v0.1.2)
 #   L2M_DIR      folder for the compose file (default ./l2m)
 #   L2M_PORT     port of the studio on this machine (default 8080)
 #   L2M_PULL     when to pull the images: always (default) or missing
 #
 # Without this script, the same in two commands:
-#   curl -fsSL https://raw.githubusercontent.com/TensorGreed/l2m/v0.1.1/docker-compose.quickstart.yml -o docker-compose.yml
+#   curl -fsSL https://raw.githubusercontent.com/TensorGreed/l2m/v0.1.2/docker-compose.quickstart.yml -o docker-compose.yml
 #   docker compose up -d
 
 # Everything runs from main, called on the last line, so a partly downloaded script does nothing.
@@ -73,7 +73,7 @@ is_release_tag() {
 
 main() {
   umask 077
-  default_version=v0.1.1
+  default_version=v0.1.2
   version=${L2M_VERSION:-}
   dir=${L2M_DIR:-./l2m}
   port=${L2M_PORT:-}

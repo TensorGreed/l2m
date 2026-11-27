@@ -6,21 +6,41 @@ All notable changes to L2M are documented here. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-11-27
+
+A test model that shows a tool call with no key, a visible Run input, safer webhook replies, and fixes from a first-run audit. Release notes: [release-notes/v0.1.2.md](release-notes/v0.1.2.md).
+
 ### Added
 - **See an agent call a tool with no key.** With tools attached, the built-in **Echo** test model makes one clearly labelled demo tool call, then answers with the result and says it is a test model that cannot choose tools. It only ever calls a tool that L2M itself classifies read-only (an admin marked it read-only, a built-in tool, or a workflow tool whose trigger declares it read-only; a server's own read-only hint is not enough), and it never makes up a value for a required input: it fills one required text input with your own message, uses defaults, and skips any tool it cannot fill. With no such tool it calls none and says why. A new starter, **Agent that calls a tool**, shows it: an agent with a read-only workflow tool that lists the built-in sample orders. It is first on Home.
 - **Run input next to Run.** **Input** holds the prompt (and an optional system prompt) the editor's Run sends as `user_prompt` / `system_prompt`, remembered per workflow in your browser and shown only for workflows that read a prompt. When a workflow has nothing to work on without one, Run opens it first, unless its Manual Trigger's test data has a `user_prompt`: then Input shows that sample and Run runs straight away. The MCP Agent Quickstart and the supervisor template ship a sample prompt this way, so they run on the first click.
 - **A Prompt field on LLM Call** (and Basic LLM Chain): a template rendered against the node's input. Left empty, the node sends its input's `prompt`, `user_prompt`, `message`, `text` or `question`, else what its parent sent, so a Webhook → LLM Call workflow sends the webhook's body in the editor and in production.
+- **Three New cards on Home**: Chat agent, Automation and Ask your documents, each opening a ready template.
+- **`l2m audit verify` in the API image.** Check an audit bundle with `docker run --rm -v "$PWD:/work:ro" -w /work ghcr.io/tensorgreed/l2m:v0.1.2 l2m audit verify <bundle.zip> --public-key <key.pem>`; no checkout needed.
+- **Run data marks empty templates.** A `{{ }}` that had no value in a run is listed on the node's run data ("Rendered empty: …") and as a run warning. The run still succeeds unless strict templates are on.
+- **Docs:** sending traces to Langfuse, Arize Phoenix and LangSmith over OTLP; the providers page lists every built-in provider, the `/v1` gateway and services reachable through the OpenAI-compatible adapter.
 
 ### Changed
 - **No hidden prompt in editor runs.** The editor no longer sends a built-in sample question or system prompt; nothing is sent until you type an Input. **Webhook run** sends only its payload.
 - An MCP Tool node added from an agent's tool port starts on **all of the server's tools** (the agent decides) instead of one tool with fixed arguments. Saved nodes keep their settings.
 - Every built-in template has a one-line description, and the gallery shows **L2M** as their author. The welcome window's pitch matches the README.
+- **Example values are hints, not settings.** New Summarize, Switch, OpenAI Compatible and Slack nodes start empty and show their examples as placeholders. A described draft that still holds an example address (such as a sample Slack webhook) lists that node as unfinished instead of saving it.
+- **Adding a node after a node with one next step puts it in that step's path** instead of starting a parallel branch. An Output that read the trigger reads `{{answer}}` when an agent is added in front of it. The canvas no longer zooms past 100% when it fits, and Tidy leaves room for an agent's rings.
+- **Typed Set values for new and imported workflows.** Set fields without a type are treated as **Auto** in new workflows and in imported files without a `createdAt`. A hand-written import that relied on text values (`"12"`) now gets typed ones (`12`). Saved workflows keep their behaviour.
+- **RAG Retrieve needs a knowledge base.** In knowledge-base mode with none picked (or the template's placeholder), the workflow is an unfinished draft; when the one named no longer exists, the run fails with what to fix instead of answering from an empty context. The seeded knowledge-base templates show as unfinished until you pick one.
+- The usage page's average latency no longer counts time a run spent waiting for approval.
+- The VS Code guide and the 5-minute tutorial follow the Docker install (port 8080) first, with a curl check and a way to try it without a key.
 
 ### Fixed
+- **Webhook replies no longer include the run's context.** A workflow with no Output node that ended on a pass-through step (Switch, If, Filter) answered `/webhook`, `/webhook-test` and the public Chat trigger with the run's variables, system prompt and provider address. Replies now carry only the workflow's data; run data keeps everything.
 - An LLM node whose prompt comes out empty now fails with what to fix instead of sending the model an empty message and reporting success. An agent whose prompt template renders empty now sends the run's prompt (or the webhook's prompt or message) it found, instead of an empty message.
 - **A failed model call fails the run.** When an agent's model call failed before the agent had answered (the model server answered 404 "model not found", refused the connection or timed out), the agent's node used to succeed with the provider's error as its answer, so the run was reported as a success with an empty output. The node now fails with the provider's error: `POST /api/webhooks/execute` answers 400 with `status: "error"`, the stream ends with an error result, and Runs shows the failed step. An agent that answered before a later model call failed still keeps that answer.
 - **VS Code extension 0.1.1: readable errors.** A failed model call shows one short message in the chat (`The model call failed: <provider message>. Check the chat model settings of workflow <id> in L2M.`) instead of the raw run JSON; other failed runs name the failed node, and the full response goes to the **L2M Agent** output channel. It does the same for servers that still report such a run as a success. The extension is also listed on [Open VSX](https://open-vsx.org/extension/l2m/vscode-l2m-agent) (for VSCodium, Cursor and other editors that use it); the README, the VS Code extension guide and the VS Code recipe link to both stores.
 - **Release: the Docker Hub signature check waits for Docker Hub.** The mirror job's `cosign verify` now tries up to 8 times, 30 seconds apart, with one log line per try, and fails after the last, instead of failing the release when Docker Hub has not served a just-pushed signature yet.
+- **Progress streams live behind a proxy.** Streaming responses send `X-Accel-Buffering: no`, so the VS Code extension and the studio see progress as it happens through the Docker quickstart's nginx.
+- The release gate page refreshes its Releases list after the gate is saved.
+- The "Record MCP calls" help says what a recording holds: MCP calls, model calls and memory reads.
+- The Webhook Input dialog no longer shows a developer-only address hint.
+- The zero-key recipe page no longer changes on every docs build.
 
 ## [0.1.1] - 2026-11-24
 
@@ -490,6 +510,7 @@ Versioning rule of thumb pre-1.0:
 - **Minor** — new features, behavior tweaks that don't break workflow JSON or env vars. May include schema-additive migrations.
 - **Major** — workflow JSON `schemaVersion` bump, env var renames, removed nodes, or any other change a self-hoster has to adapt to. Will not happen before `v1.0.0`.
 
-[Unreleased]: https://github.com/TensorGreed/l2m/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/TensorGreed/l2m/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/TensorGreed/l2m/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/TensorGreed/l2m/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/TensorGreed/l2m/releases/tag/v0.1.0

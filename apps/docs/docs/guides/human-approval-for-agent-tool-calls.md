@@ -64,7 +64,7 @@ docker run --rm -v "$PWD:/work:ro" -w /work ghcr.io/tensorgreed/l2m:<version> \
   l2m audit verify l2m-audit-<executionId>.zip --public-key audit-key.pub.pem
 ```
 
-The command line ships in the API image from the release after v0.1.1. From a checkout of the repository, `pnpm l2m audit verify l2m-audit-<executionId>.zip --public-key audit-key.pub.pem` does the same. See [verifying a bundle offline](../security/audit-bundles.md#verifying-a-bundle-offline) for the compose form.
+The command line ships in the API image from v0.1.2. From a checkout of the repository, `pnpm l2m audit verify l2m-audit-<executionId>.zip --public-key audit-key.pub.pem` does the same. See [verifying a bundle offline](../security/audit-bundles.md#verifying-a-bundle-offline) for the compose form.
 
 Exit code 0 means every file matches the signed index and the signature verifies with your key; 1 means the bundle was changed or signed by another key. Without `--public-key` the result is **SIGNER NOT VERIFIED** (exit 3), because a key embedded in the bundle proves nothing about who signed it.
 

@@ -19,7 +19,7 @@ services:
     name: l2m
     runtime: image
     image:
-      url: ghcr.io/tensorgreed/l2m-web:v0.1.1
+      url: ghcr.io/tensorgreed/l2m-web:v0.1.2
     # Free web services sleep after 15 idle minutes and take about a minute to wake, webhooks and gateway calls
     # included; pick a paid instance type in the dashboard to keep the studio awake. Free services may still reach
     # the private API and database.
@@ -40,7 +40,7 @@ services:
     name: l2m-api
     runtime: image
     image:
-      url: ghcr.io/tensorgreed/l2m:v0.1.1
+      url: ghcr.io/tensorgreed/l2m:v0.1.2
     # The API uses about 400-500 MB once started, more than the 512 MB instance type leaves room for.
     plan: 1c-2g
     envVars:
