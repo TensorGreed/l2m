@@ -87,7 +87,7 @@ FROM toolchain AS prod-deps
 RUN pnpm install --prod --frozen-lockfile --filter "@ai-orchestrator/api..." --filter "@ai-orchestrator/cli"
 
 # ---------- runtime stage ----------
-FROM ghcr.io/astral-sh/uv:0.13.8@sha256:5cc1805e2426484abca4ad46ea783bab281fdb225fd82d8ce6d66a81254bac85 AS uv
+FROM ghcr.io/astral-sh/uv:0.13.10@sha256:a3ea1357342c1a4bf9a0c53a3deb1b55379aefa037338d8113d5771efa01774f AS uv
 
 FROM node:26-alpine@sha256:c6ad9e9c1d80f6eb607c26b4b0a132ff7a2344fad1c78ea3baa2a7d4c8de6d94 AS runtime
 ENV NODE_ENV=production \
