@@ -16,8 +16,8 @@ body:
     id: version
     attributes:
       label: L2M version
-      description: The image tag or release (for example v0.1.1), or the commit if you run from source.
-      placeholder: v0.1.1
+      description: The image tag or release (for example v0.1.2), or the commit if you run from source.
+      placeholder: v0.1.2
   - type: dropdown
     id: install
     attributes:

@@ -123,7 +123,7 @@ On the **Runs** page, expanding a finished run shows its signed manifest (digest
 
 ## Verifying a bundle offline
 
-The `l2m` command line verifies bundles without contacting any server. From the release after v0.1.1 it ships in the API image, so Docker is all you need. Run it in the folder that holds the bundle and the public key:
+The `l2m` command line verifies bundles without contacting any server. From v0.1.2 it ships in the API image, so Docker is all you need. Run it in the folder that holds the bundle and the public key:
 
 ```bash
 docker run --rm -v "$PWD:/work:ro" -w /work ghcr.io/tensorgreed/l2m:<version> \

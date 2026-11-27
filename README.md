@@ -21,7 +21,7 @@ You need Docker with Compose. Then:
 Open http://localhost:8080 and sign in as `admin@l2m.local` with the password the installer prints.
 Prefer not to pipe a script into a shell? Two commands do the same, in an empty folder:
 
-    curl -fsSL https://raw.githubusercontent.com/TensorGreed/l2m/v0.1.1/docker-compose.quickstart.yml -o docker-compose.yml
+    curl -fsSL https://raw.githubusercontent.com/TensorGreed/l2m/v0.1.2/docker-compose.quickstart.yml -o docker-compose.yml
     docker compose up -d
 
 The generated password is printed once in `docker compose logs api`.

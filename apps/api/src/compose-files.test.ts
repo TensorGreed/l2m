@@ -95,7 +95,7 @@ describe("Helm chart image tags", () => {
     expect(values.image.tag).toBe("");
     expect(values.web.image.tag).toBe("");
     const appVersion = (parseDocument(read("Chart.yaml")).toJS() as { appVersion: string }).appVersion;
-    // The release workflow tags images "v" + the version (v0.1.1), which is what the chart falls back to.
+    // The release workflow tags images "v" + the version (v0.1.2), which is what the chart falls back to.
     expect(appVersion).toMatch(/^\d+\.\d+\.\d+$/);
     expect(read("templates/_helpers.tpl")).toContain('{{- .tag | default (printf "v%s" .root.Chart.AppVersion) -}}');
     for (const name of ["deployment-api.yaml", "deployment-webhook.yaml", "deployment-worker.yaml", "deployment-web.yaml"]) {

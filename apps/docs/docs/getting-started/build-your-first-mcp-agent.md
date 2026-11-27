@@ -29,7 +29,7 @@ curl -fsSL https://lsquarem.com/install.sh | sh
 Prefer not to pipe a script into a shell? These two commands do the same:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/TensorGreed/l2m/v0.1.1/docker-compose.quickstart.yml -o docker-compose.yml
+curl -fsSL https://raw.githubusercontent.com/TensorGreed/l2m/v0.1.2/docker-compose.quickstart.yml -o docker-compose.yml
 docker compose up -d
 ```
 

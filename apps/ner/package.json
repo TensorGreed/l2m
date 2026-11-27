@@ -1,6 +1,6 @@
 {
   "name": "@ai-orchestrator/ner",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "type": "module",
   "description": "l2m-ner: an optional HTTP service that finds person names, places and street addresses with a local model (no weights included).",
